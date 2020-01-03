@@ -1,0 +1,350 @@
+@using DOAE.MODEL;
+@using DOAE.COMMON;
+@using System.Web.Optimization;
+@using System.Configuration; 
+
+@{
+    Layout = null;
+    string IsUserInSession = "";
+    User objLoggedInUser = new User();
+    bool isReadDateFromXML = false;
+    string curnDate = CustomeHelpers.GetTimingList().ToString("dd-MMM-yyyy");
+    DateTime systemDate = DateTime.UtcNow.AddHours(5).AddMinutes(30);
+    bool isShowDateDiffMsg = false;
+    if (systemDate.Date != CustomeHelpers.GetTimingList().Date && isReadDateFromXML)
+    {
+        isShowDateDiffMsg = true;
+    }
+
+    bool ServiceReadTimeFromXml = Convert.ToBoolean(ConfigurationManager.AppSettings["ServiceReadTimeFromXml"].ToString());
+
+    bool IsShowImpersonate = false;
+    bool IsShowChangeSysDate = false;
+    if (CustomeHelpers.IsDDAdmin() == true || (Session["Impersonate"] != null && (bool)Session["Impersonate"] == true))
+    {
+        IsShowImpersonate = true;
+        IsShowChangeSysDate = true;
+    }
+    bool IsShowDownloadApkLink = true;
+    string DownloadApkFeatureId = RoleFeatures_Constants.DownloadMobileApp;
+    List<RoleFeatures> lstFeatures = new List<RoleFeatures>();
+    if(JDDOASession.IsInSession(SessionKeys.CurrentUser))
+    {
+        objLoggedInUser = (User) JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+        lstFeatures = objLoggedInUser.RoleFeatures;
+
+        if (objLoggedInUser.RoleFeatures.Count > 0 && DownloadApkFeatureId != null)
+        {
+            IsShowDownloadApkLink = objLoggedInUser.RoleFeatures.Where(x => x.FeatureId == DownloadApkFeatureId).FirstOrDefault() == null ? false : true;
+        }
+    }
+
+}
+
+<!DOCTYPE html> 
+<html>
+<head>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <link rel="icon" href="@Url.Content("~/Images/favicon.ico")" type="image/x-icon">
+    <title>@ViewBag.Title</title>
+
+    @Styles.Render("~/Styles/cssbootstrap")
+    @Styles.Render("~/Styles/css")
+    @Styles.Render("~/Styles/dataTablescss")
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/alphanumeric")
+    @Scripts.Render("~/bundles/ajaxJQueryVal")
+    @Styles.Render("~/Content/jqueryuicss")
+    @Scripts.Render("~/bundles/jqueryui")
+    @Scripts.Render("~/bundles/uijs")
+    @Scripts.Render("~/bundles/dataTablejs")
+    @Scripts.Render("~/bundles/ConfirmBox")
+    @Styles.Render("~/Styles/confirmboccss")
+    @Scripts.Render("~/bundles/tmsgjs")
+    @Styles.Render("~/bundles/tmsgcss")
+    @Styles.Render("~/Styles/mCustomScrollbar")
+    @Scripts.Render("~/bundles/mCustomScrollbarJs")
+    @Scripts.Render("~/Scripts/UtilityJS")
+    @Scripts.Render("~/bundles/CustomPopupScript")
+    @Styles.Render("~/Styles/CustomPopupCss")
+    @Scripts.Render("~/Scripts/UtilityJStableHeadFixerJs")
+    @Styles.Render("~/Scripts/TableHeaderFixedCss")
+    @Scripts.Render("~/Scripts/TableHeaderFixedJS")
+    <script>
+      var _sessionTimeoutUrl = '@Url.Action("SessionTimeout", "Session")';
+      var _checkSessionUrl = '@Url.Action("IsSessionAlive", "Session")';
+    </script>
+    <script type="text/javascript">
+        function RedirectToSessionTimeOut()
+        {
+            if ('@IsUserInSession' == "0")
+            {
+                window.location.href = "@Url.Action("Login", "Login")";
+            }
+        }
+        RedirectToSessionTimeOut();
+    </script>
+</head>
+<body>
+    <div id="dvLoading" class="loaderImg" style="display:none;z-index:120000000">
+        <div class="loadingIcon">
+            <i class="fa fa-spinner fa-pulse fa-3x fa-fw"></i>
+            <span class="sr-only">Loading...</span>
+            <span class="waittext" style="" id="dvWaitText">Please wait...</span>
+        </div>
+    </div>
+    <!-- Header Start -->
+    <div class="mainHeader">
+        <div class="">
+            <div class="row">
+                <div class="col-lg-12 col-sm-12 col-md-12 col-xs-12">
+                    <div class="brand">
+                        <img src='@Url.Content("~/Images/logo.png")' alt="John Deere" />
+                    </div>
+                    <div class="pr-Title">
+                        <h3>Dealer Portal @*<span style="color: #34923A">[@curnDate]</span>*@ </h3>
+                    </div>
+                </div>
+                @*<div class="col-lg-2 col-sm-3 col-md-3 col-xs-12">
+                        <div class="brand">
+                            <img src='@Url.Content("~/Images/logo.png")' alt="John Deere" />
+                        </div>
+                    </div>
+                    <div class="col-lg-10 col-sm-9 col-md-9 col-xs-12">
+                        <div class="row">
+                            <div class="col-lg-9 col-sm-9 col-md-9 col-xs-12">
+                                <div class="text-center dateChange">
+                                    <h3>Dealer Onboarding  </h3>
+                                    <label id="lblDateChanged" style="display:none;" class="text-danger">[Note: Your application date is different from current date.]</label>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-sm-3 col-md-3 col-xs-12">
+                            </div>
+                        </div>
+                    </div>*@
+                <div class="pull-right profileName">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a aria-expanded="false" aria-haspopup="true" role="button" data-toggle="dropdown" class="dropdown-toggle" href="#">
+                                <span class="loginLeft"><span class="loginImage"><img alt="John Deere" src="../Images/profile-img.png"></span></span>
+                                <span class="loginRight">
+                                    <span class="mainText"><span>@Convert.ToString(objLoggedInUser.DisplayName)</span> <span class="caret"></span></span>
+                                    <span class="small">@Convert.ToString(((objLoggedInUser.DisplayDesignation == null || objLoggedInUser.DisplayDesignation == "") ? objLoggedInUser.RoleName : objLoggedInUser.DisplayDesignation))</span>
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu lytdropdownmenu">
+                                @*<li><a href="@Url.Action("ChangePassword", "Login")" data-dialog-id="skillDialog2" data-dialog-title="Change Password" class="openChangePassword" id="changePassword"><i class="fa fa-lock pr5"></i> Change password </a></li>*@
+                                @{
+                                    if (ServiceReadTimeFromXml==true && IsShowChangeSysDate == true)
+                                    {
+                                        <li class="lytdate">
+                                            @Html.ActionLink(" Date", "GetSystemDateTime", "Common", null, new
+                                                                {
+                                                                    @class = "openDialogT",
+                                                                    data_dialog_id = "aboutDialog",
+                                                                    data_dialog_title = "Change System Date"
+                                                                })
+                                        </li>
+                                    }
+                                    if (IsShowImpersonate == true)
+                                    {
+                                        <li class="impersonateuser">
+                                            @Html.ActionLink(" Impersonate User", "ImpersonateUser", "login", null, new
+                                                                {
+                                                                    @class = "openImpersonate",
+                                                                    data_dialog_id = "ImpersonateDialog",
+                                                                    data_dialog_title = "Impersonate User"
+                                                                })
+                                        </li>
+                                    }
+                                    if (IsShowDownloadApkLink == true)
+                                    {
+                                        <li><a href="@Url.Action("DownloadApk", "Home", new { CurrentPageid = DownloadApkFeatureId, PfID = "" })" id="" class="lftmn"><img src="@Url.Content("~/Images/mbApp2.png")" alt="" /> Download Mobile App</a></li>                                        
+                                    }
+                                }
+                                <li><a href="@Url.Action("LogOut", "login" )"><i class="fa fa-sign-out mr5"></i>Logout</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="headerBorder"></div>
+    <ul class="dashboardMenu">
+        <li>
+            <button type="button" class="btn btn-green btn-toggle" id="btnSlideMenu">
+                <i class="fa fa-bars"></i>
+            </button>
+        </li>
+    </ul>
+    <div class="mainContent">
+        <div class="container">
+            @*<div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+
+                    </div>
+                </div>*@
+            <div class="row">
+                <div class="menuWrapper" id="dvMenu">
+                    @Html.Action("RenderMenus", "Home", new { lstFeatures = lstFeatures })
+                </div>
+                <div class="mainContentBox">
+                    @RenderBody()
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog">
+            <div class="">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title"></h4>
+            </div>
+            <div class="modal-content">
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $("#btnSlideMenu").click(function ()
+        {
+
+            if ($('#dvMenu').css('display') == 'none') {
+                $('#dvMenu').css("display", "block");
+                $(".mainContentBox").css("margin-left", "205px");
+
+                } else {
+                $('#dvMenu').css("display", "none");
+                $(".mainContentBox").css("margin-left", "15px");
+
+                }
+        });
+        $(document).ajaxStart(function ()
+        {
+            $('#dvLoading').show();
+        });
+
+        $(document).ajaxStop(function ()
+        {
+            $('#dvLoading').hide();
+        });
+        $(document).on('change', '.btn-file :file', function ()
+        {
+            var input = $(this),
+            numFiles = input.get(0).files ? input.get(0).files.length : 1,
+            label = input.val().replace(/\\/g, '/').replace(/.*\//, '');
+            input.trigger('fileselect', [numFiles, label]);
+        });
+        $(document).ready(function ()
+        {
+            applyXYScroll("dvMenu");
+            if ('@isShowDateDiffMsg' == 'True')
+            {
+                $('#lblDateChanged').show();
+            }
+            else
+            {
+                $('#lblDateChanged').hide();
+            }
+            $('.btn-file :file').on('fileselect', function (event, numFiles, label)
+            {
+                var input = $(this).parents('.input-group').find(':text'),
+                log = numFiles > 1 ? numFiles + ' files selected' : label;
+                if (input.length) {
+                    input.val(log);
+                } else {
+                    if (log) alert(log);
+                }
+            });
+        });
+
+        (function ($)
+        {
+            $(document).ready(function ()
+            {
+                $('#cssmenu li.has-sub>a').on('click', function ()
+                {
+                    $(this).removeAttr('href');
+                    var element = $(this).parent('li');
+                    if (element.hasClass('menu_select')) {
+                        element.removeClass('menu_select');
+                        element.find('ul').slideUp();
+                    }
+                    else
+                    {
+                        element.addClass('menu_select');
+                        element.children('ul').slideDown();
+                        element.siblings('li').children('ul').slideUp();
+                        element.siblings('li').find('ul').slideUp();
+                    }
+                });
+                $('#cssmenu>ul>li.has-sub>a').append('<span class="holder"></span>');
+                $('#cssmenu>ul ul>li.has-sub>a').append('<span class="holder"></span>');
+            });
+
+
+        })(jQuery);
+
+        $(".openDialogT").click(function (e)
+        {
+            e.preventDefault();
+            isSessionAlive();
+            $("<div></div>")
+                .addClass("dialog")
+                .attr("id", $(this)
+                .attr("data-dialog-id"))
+                .appendTo("body")
+                .dialog({
+                    title: $(this).attr("data-dialog-title"),
+                    close: function () { $(this).remove(); },
+                    modal: true,
+
+                    width: 450,
+                    left: 0
+                })
+            .load(this.href);
+        });
+
+        $(".openImpersonate").click(function (e) {
+            e.preventDefault();
+            isSessionAlive();
+            $("<div></div>")
+                .addClass("dialog")
+                .attr("id", $(this)
+                    .attr("data-dialog-id"))
+                .appendTo("body")
+                .dialog({
+                    title: $(this).attr("data-dialog-title"),
+                    close: function () { $(this).remove(); },
+                    modal: true,
+
+                    width: 250,
+                    left: 0
+                })
+                .load(this.href);
+        });
+
+
+
+    </script>
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            showToastMsg('@TempData["ErrorMessage"]', 'error', null);
+        </script>
+    }
+    <style>
+        div.toast-container {
+            z-index: 120000000
+        }
+    </style>
+  
+</body>
+</html>
+
+
