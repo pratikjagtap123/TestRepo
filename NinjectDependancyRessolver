@@ -1,0 +1,271 @@
+using Ninject;
+using Ninject.Modules;
+using Ninject.Syntax;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Web.Mvc;
+using DOAE.CORE;
+using DOAE.DAL;
+namespace DOAE.DI
+{
+	public class NinjectDependancyRessolver : IDependencyResolver
+	{
+		private IKernel _kernel;
+		public IKernel Kernel { get { return this._kernel; } }
+		public NinjectDependancyRessolver()
+				: base()
+		{
+			this._kernel = new StandardKernel();
+			_kernel.Load(Assembly.GetExecutingAssembly());
+			//this._kernel = new StandardKernel(
+			//new SampleModule()); // this contains your dependency graph
+		}
+		public object GetService(Type serviceType)
+		{
+			return this._kernel.TryGet(
+			 serviceType);
+		}
+		public IEnumerable<object> GetServices(Type serviceType)
+		{
+			return this._kernel.GetAll(
+				serviceType);
+		}
+		public IBindingToSyntax<T> Bind<T>()
+		{
+			return this._kernel.Bind<T>();
+		}
+		public T ResolveType<T>()
+		{
+			return this._kernel.Get<T>();
+		}
+	}
+	public class JDDOAModule : NinjectModule
+	{
+		public override void Load()
+		{
+			Bind<IFileHandler>().To<FileHandler>();
+
+			Bind<IUserRepository>().To<UserRepository>();
+			Bind<IUserService>().To<UserService>();
+
+			Bind<IStateRepository>().To<StateRepository>();
+			Bind<IStateService>().To<StateService>();
+
+			Bind<IDesignationRepository>().To<DesignationRepository>();
+			Bind<IDesignationService>().To<DesignationService>();
+
+			Bind<IRoleFeatureRepo>().To<RoleFeatureRepo>();
+			Bind<IRoleFeatureService>().To<RoleFeatureService>();
+
+			Bind<IWorkFlowGroupsRepository>().To<WorkFlowGroupsRepository>();
+			Bind<IWorkFlowGroupsService>().To<WorkFlowGroupsService>();
+
+
+			Bind<IDocumentMasterRepository>().To<DocumentMasterRepository>();
+			Bind<IDocumentMasterService>().To<DocumentMasterService>();
+
+			Bind<IInfraPicsDocsRepository>().To<InfraPicsDocsRepository>();
+			Bind<IInfraPicsDocsService>().To<InfraPicsDocsService>();
+
+			Bind<IEmailTemplateMasterRepository>().To<EmailTemplateMasterRepository>();
+			Bind<IEmailTemplateMasterService>().To<EmailTemplateMasterService>();
+
+			Bind<IInstallationRequestService>().To<InstallationRequestService>();
+			Bind<IInstallationRequestRepository>().To<InstallationRequestRepository>();
+
+			Bind<ILookupService>().To<LookupService>();
+			Bind<ILookupRepository>().To<LookupRepository>();
+
+			Bind<IBasicInfoService>().To<BasicInfoService>();
+			Bind<IBasicInfoRepository>().To<BasicInfoRepository>();
+
+			Bind<IClusterService>().To<ClusterService>();
+			Bind<IClusterRepository>().To<ClusterRepository>();
+
+			Bind<IPFSDetailsMasterService>().To<PFSDetailsMasterService>();
+			Bind<IPFSDetailsMasterRepository>().To<PFSDetailsMasterRepository>();
+
+			Bind<IPFSMarketLeadersMasterService>().To<PFSMarketLeadersMasterService>();
+			Bind<IPFSMarketLeadersMasterRepository>().To<PFSMarketLeadersMasterRepository>();
+
+			Bind<ISDNDetailService>().To<SDNDetailService>();
+			Bind<ISDNDetailRepository>().To<SDNDetailRepository>();
+
+			Bind<ICompetitorMasterService>().To<CompetitorMasterService>();
+			Bind<ICompetitorMasterRepository>().To<CompetitorMasterRepository>();
+
+
+
+			Bind<IEmailService>().To<EmailService>();
+			Bind<IRatingSheetMasterRepository>().To<RatingSheetMasterRepository>();
+			Bind<IRatingSheetMasterService>().To<RatingSheetMasterService>();
+			Bind<IPFSRatingsRepository>().To<PFSRatingsRepository>();
+			Bind<IPFSRatingsService>().To<PFSRatingsService>();
+
+			Bind<ICapitalMasterService>().To<CapitalMasterService>();
+			Bind<ICapitalMasterRepository>().To<CapitalMasterRepository>();
+			Bind<IRatingScoreService>().To<RatingScoreService>();
+			Bind<IRatingScoreRepository>().To<RatingScoreRepository>();
+
+			Bind<ICodeCreationMasterService>().To<CodeCreationMasterService>();
+			Bind<ICodeCreationMasterRepository>().To<CodeCreationMasterRepository>();
+			Bind<IAgreementdetailsMasterService>().To<AgreementdetailsMasterService>();
+			Bind<IAgreementdetailsMasterRepository>().To<AgreementdetailsMasterRepository>();
+			Bind<IDistributorMasterService>().To<DistributorMasterService>();
+			Bind<IDistributorMasterRepository>().To<DistributorMasterRepository>();
+
+			Bind<IIndCustomerService>().To<IndCustomerService>();
+			Bind<IIndCustomerRepository>().To<IndCustomerRepository>();
+
+
+
+			Bind<IInstDocTrackerService>().To<InstDocTrackerService>();
+			Bind<IInstDocTrackerRepository>().To<InstDocTrackerRepository>();
+
+			Bind<IInstllationDocsService>().To<InstllationDocsService>();
+			Bind<IInstllationDocsRepository>().To<InstllationDocsRepository>();
+
+			Bind<IInstDocsFilesService>().To<InstDocsFilesService>();
+			Bind<IInstDocsFilesRepository>().To<InstDocsFilesRepository>();
+
+			Bind<IPFAAdditionalDocsService>().To<PFAAdditionalDocsService>();
+			Bind<IPFAAdditionalDocsRepository>().To<PFAAdditionalDocsRepository>();
+
+			Bind<IAcountViewDocsService>().To<AcountViewDocsService>();
+			Bind<IAcountViewDocsRepository>().To<AcountViewDocsRepository>();
+
+			Bind<ICodeUnblockingMasterService>().To<CodeUnblockingMasterService>();
+			Bind<ICodeUnblockingMasterRepository>().To<CodeUnblockingMasterRepository>();
+
+			Bind<IUnblockingPartPaymentsService>().To<UnblockingPartPaymentsService>();
+			Bind<IUnblockingPartPaymentsRepository>().To<UnblockingPartPaymentsRepository>();
+
+			Bind<IInfraPickDetailsMasterService>().To<InfraPickDetailsMasterService>();
+			Bind<IInfraPickDetailsMasterRepository>().To<InfraPickDetailsMasterRepository>();
+
+			Bind<IInfraPicFilesService>().To<InfraPicFilesService>();
+			Bind<IInfraPicFilesRepository>().To<InfraPicFilesRepository>();
+
+
+
+			Bind<IDealerExitService>().To<DealerExitService>();
+			Bind<IDealerExitRepository>().To<DealerExitRepository>();
+
+			Bind<IDealerExitCheckListService>().To<DealerExitCheckListService>();
+			Bind<IDealerExitCheckListRepository>().To<DealerExitCheckListRepository>();
+
+			Bind<IDealerExitQuestionTrackingService>().To<DealerExitQuestionTrackingService>();
+			Bind<IDealerExitQuestionTrackingRepository>().To<DealerExitQuestionTrackingRepository>();
+
+			Bind<IDealerExitQuestionsService>().To<DealerExitQuestionsService>();
+			Bind<IDealerExitQuestionsRepository>().To<DealerExitQuestionsRepository>();
+
+			Bind<IExitCheckListMasterService>().To<ExitCheckListMasterService>();
+			Bind<IExitCheckListMasterRepository>().To<ExitCheckListMasterRepository>();
+
+			Bind<IExitCheckListRolesService>().To<ExitCheckListRolesService>();
+			Bind<IExitCheckListRolesRepository>().To<ExitCheckListRolesRepository>();
+
+			Bind<IDealerExitInterViewService>().To<DealerExitInterViewService>();
+			Bind<IDealerExitInterViewRepository>().To<DealerExitInterViewRepository>();
+
+			Bind<IDealersService>().To<DealersService>();
+			Bind<IDealersRepository>().To<DealersRepository>();
+
+			Bind<IExitTatService>().To<ExitTatService>();
+			Bind<IExitTatRepository>().To<ExitTatRepository>();
+
+			Bind<IExitQuestionsMasterService>().To<ExitQuestionsMasterService>();
+			Bind<IExitQuestionsMasterRepository>().To<ExitQuestionsMasterRepository>();
+
+			Bind<IInterViewQuestionTrackingService>().To<InterViewQuestionTrackingService>();
+			Bind<IInterViewQuestionTrackingRepository>().To<InterViewQuestionTrackingRepository>();
+
+			#region Tracker 
+			Bind<ITrackerCategoriesService>().To<TrackerCategoriesService>();
+			Bind<ITrackerCategoriesRepository>().To<TrackerCategoriesRepository>();
+
+			Bind<ITrackerCheckListService>().To<TrackerCheckListService>();
+			Bind<ITrackerCheckListRepository>().To<TrackerCheckListRepository>();
+            #endregion
+
+            Bind<IExhibitHeadsMasterService>().To<ExhibitHeadsMasterService>();
+            Bind<IExhibitHeadsMasterRepository>().To<ExhibitHeadsMasterRepository>();
+
+            Bind<IExhibitParametersMasterService>().To<ExhibitParametersMasterService>();
+            Bind<IExhibitParametersMasterRepository>().To<ExhibitParametersMasterRepository>();
+
+            Bind<IExhibitHeadDetailsMasterService>().To<ExhibitHeadDetailsMasterService>();
+            Bind<IExhibitHeadDetailsMasterRepository>().To<ExhibitHeadDetailsMasterRepository>();
+
+            Bind<IExhibitParameterTrackerService>().To<ExhibitParameterTrackerService>();
+            Bind<IExhibitParameterTrackerRepository>().To<ExhibitParameterTrackerRepository>();
+
+            #region Master
+
+            Bind<IDeviationDashboardReportRepo>().To<DeviationDashboardReportRepo>();
+            Bind<IDeviationDashboardReportService>().To<DeviationDashboardReportService>();
+
+            Bind<IDealerInstallationDashboardRepo>().To<DealerInstallationDashboardRepo>();
+            Bind<IDealerInstallationDashboardService>().To<DealerInstallationDashboardService>();
+
+            Bind<IDealerStatRepository>().To<DealerStatRepository>();
+            Bind<IDealerStatReportService>().To<DealerStatReportService>();
+
+            Bind<IDealerAppccessRepository>().To<DealerAppccessRepository>();
+            Bind<IDealerAppAccessService>().To<DealerAppAccessService>();
+
+            Bind<IUserMasterService>().To<UserMasterService>();
+            Bind<IUserMasterRepository>().To<UserMasterRepository>();
+            
+            Bind<IStateMasterService>().To<StateMasterService>();
+            Bind<IStateMasterRepository>().To<StateMasterRepository>();
+
+            Bind<ITehsilMasterService>().To<TehsilMasterService>();
+            Bind<ITehsilMasterRepository>().To<TehsilMasterRepository>();
+
+            Bind<IDistrictMasterService>().To<DistrictMasterService>();
+            Bind<IDistrictMasterRepository>().To<DistrictMasterRepository>();
+
+            Bind<IVillagesRepository>().To<VillagesRepository>();
+            Bind<IVillageService>().To<VillageService>();
+
+            Bind<IRoleAssignmentRepository>().To<RoleAssignmentRepository>();
+            Bind<IRoleAssignmentService>().To<RoleAssignmentService>();
+            
+            Bind<IGradesMasterRepository>().To<GradesMasterRepository>();
+            Bind<IGradesMasterService>().To<GradesMasterService>();
+
+            Bind<IDepartmentMasterService>().To<DepartmentMasterService>();
+            Bind<IDepartmentMasterRepository>().To<DepartmentMasterRepository>();
+
+            Bind<IApplicationMasterService>().To<ApplicationMasterService>();
+            Bind<IApplicationMasterRepository>().To<ApplicationMasterRepository>();
+
+            Bind<ISystemRolesMasterService>().To<SystemRolesMasterService>();
+            Bind<ISystemRolesMasterRepository>().To<SystemRolesMasterRepository>();
+
+            Bind<ICostCenterService>().To<CostCenterService>();
+            Bind<ICostCenterRepository>().To<CostCenterRepository>();
+
+            Bind<IVendorMasterService>().To<VendorMasterService>();
+            Bind<IVendorMasterRepository>().To<VendorMasterRepository>();
+
+            Bind<IRtoDataRepository>().To<RtoDataRepository>();
+            Bind<IRtoDataService>().To<RtoDataService>();
+
+            Bind<IImportColumnMappingRepository>().To<ImportColumnMappingRepository>();
+            Bind<IImportColumnMappingService>().To<ImportColumnMappingService>();
+
+            Bind<IDealerMasterService>().To<DealerMasterService>();
+            Bind<IDealerMasterRepository>().To<DealerMasterRepository>();
+
+            Bind<IDealerPartnersService>().To<DealerPartnersService>();
+            Bind<IDealerPartnersRepository>().To<DealerPartnersRepository>();
+
+
+            #endregion
+        }
+    }
+}
