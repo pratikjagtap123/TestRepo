@@ -1,0 +1,37 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using DOAE.COMMON;
+
+namespace DOAE 
+{
+    public class CheckSessionFilterAttribute : ActionFilterAttribute
+    {
+        public override void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            Controller controller = filterContext.Controller as Controller;
+            if (!JDDOASession.IsInSession(SessionKeys.CurrentUser))
+            {
+                if (filterContext.HttpContext.Request.IsAjaxRequest())
+                {
+                    filterContext.HttpContext.Response.Clear();
+                    filterContext.HttpContext.Response.StatusCode = 403;
+                    filterContext.HttpContext.Response.TrySkipIisCustomErrors = true;
+                    var jr = new JsonResult();
+                    jr.JsonRequestBehavior = JsonRequestBehavior.AllowGet;
+                    filterContext.Result = jr;
+                }
+                else
+                {
+                    filterContext.Result = new RedirectToRouteResult(new
+                       System.Web.Routing.RouteValueDictionary(new { controller = "Session", action = "sessionTimeout" }));
+                }
+            }
+            else
+                base.OnActionExecuting(filterContext);
+        }
+    }
+}
