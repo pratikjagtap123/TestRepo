@@ -1,0 +1,192 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using DOAE.DAL;
+using DOAE.MODEL;
+
+namespace DOAE.CORE
+{
+    public class UserService : IUserService
+    {
+        IUserRepository _IUserRepository = null;
+        public UserService(IUserRepository IUserRepository)
+        {
+            _IUserRepository = IUserRepository;
+
+        }
+        public int AddEditDelete(User entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int DeleteAreaOfResponsibility(User obj)
+        {
+            string[] addparams = {
+                                     User_Constants.UserId,
+                                     User_Constants.ReferenceId,
+                                     BaseEntity_Constants.CREATEDBYID
+                                };
+            return _IUserRepository.ExecuteNonQuery(obj, addparams, User_Constants.DOAE_sproc_DeleteAreaOfResponsibility);
+        }
+
+        public User Get(User obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<User> GetAll(User entity)
+        {
+            string[] addparams = {
+                                        BaseEntity_Constants.PageIndex,
+                                        BaseEntity_Constants.PageSize,
+                                        BaseEntity_Constants.SortExp,
+                                        User_Constants.sysRoleId,
+                                        User_Constants.IsActive,
+                                        User_Constants.Login,
+                                        BaseEntity_Constants.ApplicationCode
+                                      
+                                 };
+            return _IUserRepository.GetAll(entity, addparams, User_Constants.DOAE_SPROC_USERS_GETALL);
+        }
+
+        public IEnumerable<User> GetAreaOfResponsibilityForMapping(User obj)
+        {
+            string[] addparams = {
+                                     BaseEntity_Constants.PageIndex,
+                                     BaseEntity_Constants.PageSize,
+                                     BaseEntity_Constants.SortExp,
+                                     User_Constants.UserId,
+                                     User_Constants.Name,
+                                     User_Constants.Division,
+                                     User_Constants.StateCode,
+                                     User_Constants.DistrictCode,
+                                     BaseEntity_Constants.ApplicationCode
+                                };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_sproc_GetAreaOfReponsibilityForMapping);
+        }
+
+        public object GetScalar(User obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        public User GetUserById(User obj)
+        {
+            string[] addparams = { BaseEntity_Constants.UserId };
+            return _IUserRepository.Get(obj, addparams, User_Constants.DOAE_SPORC_USERGETBYID);
+        }
+
+        public int UserAssignAreaOfResponsibility(User obj)
+        {
+            string[] addparams = {
+                                     User_Constants.UserId,
+                                     User_Constants.ReferenceId,
+                                     BaseEntity_Constants.CREATEDBYID
+                                };
+            return _IUserRepository.ExecuteNonQuery(obj, addparams, User_Constants.DOAE_sproc_UserAssignAreaOfResponsibility);
+        }
+
+        public IEnumerable<User> UserMappedAreaOfResponsibility(User entity)
+        {
+            string[] addparams = {
+                                     BaseEntity_Constants.PageIndex,
+                                     BaseEntity_Constants.PageSize,
+                                     BaseEntity_Constants.SortExp,
+                                     User_Constants.UserId,
+                                     BaseEntity_Constants.ApplicationCode
+                                };
+            return _IUserRepository.GetAll(entity, addparams, User_Constants.DOAE_SPROC_USERMAPPEDAREAOFREPONSIBILITY);
+        }
+
+       public   User CheckLogin(User obj)
+         {
+            string[] addparams = {
+                                     User_Constants.Login ,
+                                     User_Constants.Password ,
+                                     User_Constants.ApplicationCode
+                                };
+            return _IUserRepository.Get(obj, addparams, User_Constants.DOAE_sproc_Login);
+        }
+        public IEnumerable<User> GetUserByRole(User obj)
+        {
+            string[] addparams = {
+                User_Constants.RoleId,
+                User_Constants.StateCode,
+                BaseEntity_Constants.UserId,
+                BaseEntity_Constants.ApplicationCode,
+                BaseEntity_Constants.InstallationId,
+                User_Constants.RoleName,
+                User_Constants.Platform
+            };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_sporc_GetUserByRole);
+        }
+
+        public IEnumerable<User> GetUsersToSendEmails(User obj)
+        {
+            string[] addparams = {
+                User_Constants.EMAILTEMPLATEID,
+                User_Constants.InstallationId ,
+                User_Constants.CUSTOMERID
+                 };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_SPOC_GETUUSERSTOSENDEMAIL);
+        }
+
+        public IEnumerable<User> GetUsersToSendEmails_Tracker(User obj)
+        {
+            string[] addparams = {
+                User_Constants.EMAILTEMPLATEID,
+                User_Constants.InstallationId ,
+                User_Constants.CUSTOMERID,
+                User_Constants.DealerSapCode
+                 };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_SPOC_GETUUSERSTOSENDEMAIL_TRACKER);
+        }
+
+
+
+        public IEnumerable<User> GetUsersToSendExitEmails(User obj)
+        {
+            string[] addparams = {
+                User_Constants.EMAILTEMPLATEID,
+                User_Constants.EXITID 
+                 };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_SPOC_GETUusersToSendEmail_Exit);
+        }
+
+        public IEnumerable<User> GetUserByDealer(User obj)
+        {
+            string[] addparams = {
+                User_Constants.DealerSapCode,
+                BaseEntity_Constants.ApplicationCode,
+                User_Constants.RoleName,
+                User_Constants.UserId
+            };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_sproc_GetListOfUsersByDealer);
+        }
+
+        public   IEnumerable<User> GetUsersToSendEsclationEmail(User obj)
+        {
+            string[] addparams = 
+             {
+                BaseEntity_Constants.EXITID,
+                User_Constants.GroupId
+            };
+            return _IUserRepository.GetAll(obj, addparams, User_Constants.DOAE_SPOC_GETUusersToSendEmail_Exit_Reminder);
+        }
+
+        public User Impersonate(User objUSer)
+        {
+            string[] addparams = {
+                                   User_Constants.Login ,User_Constants.ApplicationCode
+                                 };
+            return _IUserRepository.Get(objUSer, addparams, User_Constants.DOAE_sproc_Impersonate);
+        }
+
+        public IEnumerable<User> GetAllFinancialYear()
+        {
+            return _IUserRepository.GetAll(null, null, User_Constants.DOAE_Proc_GetJDFinancialYear);
+        }
+    }
+}
