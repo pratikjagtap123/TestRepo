@@ -1,0 +1,187 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Configuration;
+using System.Web.Http;
+using System.Web.Helpers;
+using DOAE.DI;
+using System.Web.Optimization;
+using DOAE.Controllers;
+using DOAE.MODEL;
+using DOAE.CORE;
+using DOAE.COMMON;
+using System.IO;
+namespace DOAE
+{
+    public class MvcApplication : System.Web.HttpApplication
+    {
+        protected void Application_Start()
+        {
+            AreaRegistration.RegisterAllAreas();
+            GlobalConfiguration.Configure(WebApiConfig.Register);
+            FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+            BundleConfig.RegisterBundles(BundleTable.Bundles);
+            DependencyResolver.SetResolver(new NinjectDependancyRessolver());
+            AntiForgeryConfig.SuppressIdentityHeuristicChecks = true;  
+        }
+        public static bool Log_Info
+        {
+            get
+            {
+                try {
+                    return Convert.ToBoolean(ConfigurationManager.AppSettings["LOG_INFO"]);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            set {
+            }
+        }
+
+        private static bool? _OktaEnable;
+        public static bool OktaEnable
+        {
+            get
+            {
+                if (_OktaEnable.HasValue)
+                    return _OktaEnable.Value;
+                else
+                {
+                    int enableOkta = Convert.ToInt32(ConfigurationManager.AppSettings["okta:Enable"]);
+                    _OktaEnable = Convert.ToBoolean(enableOkta);
+                    return _OktaEnable.Value;
+                }
+            }
+        }
+        protected void Application_BeginRequest(Object source, EventArgs e)
+        {
+            bool isAllowHttps = Convert.ToBoolean(ConfigurationManager.AppSettings["IsAllowHttps"].ToString());
+            if (isAllowHttps)
+            {
+                if (!Context.Request.IsSecureConnection)
+                {
+                    Response.Redirect(Request.Url.AbsoluteUri.Replace("http://", "https://"));
+                }
+            }
+        }
+
+        private void WriteLog(string Messsage)
+        {
+            StreamWriter sw = null;
+            try
+            {
+                string strFilePath = ConfigurationManager.AppSettings["SchedularLogFile"].ToString();
+                if (!File.Exists(strFilePath))
+                {
+                    using (sw = File.CreateText(strFilePath))
+                    {
+                        sw.WriteLine("");
+                    }
+                }
+                sw = File.AppendText(strFilePath);
+                sw.WriteLine(Messsage);
+                sw.Flush();
+                sw.Close();
+            }
+            catch
+            {
+                //string strFilePath = ConfigurationManager.AppSettings["SchedularLogFile"].ToString();
+                //sw = new StreamWriter(strFilePath);
+                //sw.WriteLine("Error While Creating File");
+                //sw.Flush();
+                //sw.Close();
+            }
+        }
+
+        protected void Application_Error(object sender, EventArgs e)
+        {
+            try
+            {
+                var currentContext = ((MvcApplication)sender).Context;
+                var currentRoutData = RouteTable.Routes.GetRouteData(new HttpContextWrapper(currentContext));
+                var currentAction = "";
+                var currentController = "";
+                if (currentRoutData != null)
+                {
+                    if (currentRoutData.Values["Controller"] != null && !string.IsNullOrEmpty(currentRoutData.Values["Controller"].ToString()))
+                    {
+                        currentController = currentRoutData.Values["Controller"].ToString();
+                    }
+                    if (currentRoutData.Values["Action"] != null && !string.IsNullOrEmpty(currentRoutData.Values["Action"].ToString()))
+                    {
+                        currentAction = currentRoutData.Values["Action"].ToString();
+                    }
+                }
+                var exception = Server.GetLastError();
+                var errorController = new ErrorController();
+                var routeData = new RouteData();
+                var ActionName = "";
+
+                User objUsr = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+                int? userId = 0;
+                if (objUsr != null)
+                {
+                    if (objUsr.UserId != null)
+                        userId = objUsr.UserId;
+                } 
+
+                ExceptionManagement logExpection = new ExceptionManagement();
+                logExpection.ManageException(Server.GetLastError().GetBaseException(), true, ExceptionManagement.ErrorLogType.TextFile, Convert.ToString(userId));
+                if (exception is HttpException)
+                {
+                    var ex = exception as HttpException;
+                    if (ex != null)
+                    {
+                        int errorCode = ex.GetHttpCode();
+                        switch (errorCode)
+                        {
+                            case 404:
+                                ActionName = "NotFound";
+                                break;
+                            case -2147467259:
+                                ActionName = "Error";
+                                break;
+                            default:
+                                ActionName = "Error";
+                                break;
+                        }
+                    }
+                }
+                else if (exception != null)
+                {
+                    ActionName = "Error";
+                }
+                currentContext.ClearError();
+                currentContext.Response.Clear();
+                currentContext.Response.StatusCode = exception is HttpException ? ((HttpException)exception).GetHttpCode() : 500;
+                currentContext.Response.TrySkipIisCustomErrors = true;
+                routeData.Values["Controller"] = "Error";
+
+                string OktaAuthorizationController = ConfigurationManager.AppSettings["okta:authorizationController"];
+                string OktaAuthorizationAction = ConfigurationManager.AppSettings["okta:authorizationAction"];
+
+                if (currentController == OktaAuthorizationController && currentAction == OktaAuthorizationAction)
+                {
+                    routeData.Values["Action"] = "UnAthorizedAccess";
+                    routeData.Values["ErrorMsg"] = "You are not authorized to see the content of this page. Please contact to Administrator for OKTA login setup.";
+                }
+                else
+                {                 
+                    routeData.Values["Action"] = ActionName;
+                }
+                errorController.ViewData.Model = new HandleErrorInfo(exception, currentController, currentAction);
+                ((IController)errorController).Execute(new RequestContext(new HttpContextWrapper(currentContext), routeData));
+            }
+            catch (Exception ex)
+            {
+                string msg = ex.Message;
+            }
+        }
+    }
+}
