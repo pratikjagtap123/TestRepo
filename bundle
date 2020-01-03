@@ -1,0 +1,142 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Optimization;
+namespace DOAE
+{
+    public class BundleConfig
+    {
+        public static void RegisterBundles(BundleCollection bundles)
+        {
+
+            bundles.Add(new ScriptBundle("~/Scripts/TableFilter")
+               .Include("~/Scripts/tablefilter.js")
+               );
+
+            //bundles.Add(new ScriptBundle("~/Scripts/HighCharts")
+            //   .Include("~/Scripts/Highcharts-4.0.1/js/highcharts.js", "~/Scripts/Highcharts-4.0.1/js/highcharts-more.js")
+            //   );
+
+            bundles.Add(new ScriptBundle("~/bundles/tmsgjs").Include("~/Scripts/jquery.toastmessage.js",
+                        "~/Scripts/jquery.toastmessage.config.js"));
+
+            bundles.Add(new StyleBundle("~/bundles/tmsgcss").Include("~/Content/toastmessage/jquery.toastmessage.css"));
+
+            bundles.Add(new ScriptBundle("~/bundles/jqueryval").
+            Include("~/Scripts/jquery.validate*", "~/Scripts/jquery.unobtrusive*"));
+
+            bundles.Add(new ScriptBundle("~/bundles/ajaxJQueryVal").
+            Include("~/Scripts/jquery.validate*"));
+
+            bundles.Add(new ScriptBundle("~/bundles/unobtrusiveJQueryVal").
+           Include("~/Scripts/jquery.validate.unobtrusive.min.js"));
+
+            bundles.Add(new ScriptBundle("~/bundles/textareaCounter").
+            Include("~/Scripts/jquery.limit-textarea.min.js"));
+
+            bundles.Add(new ScriptBundle("~/bundles/jqueryui").Include(
+                      "~/Scripts/jquery-ui-{version}.js"));
+
+
+            bundles.Add(new ScriptBundle("~/bundles/modernizr").Include
+                (
+                  "~/Scripts/modernizr-*"));
+
+
+
+            bundles.Add(new ScriptBundle("~/Scripts/UtilityJS").Include("~/Scripts/UtilityJS/Utility.js"));
+
+            bundles.Add(new ScriptBundle("~/bundles/uijs").Include
+                (
+                        "~/Scripts/UIJS/bootstrap.min.js"
+              ));
+
+            //bundles.Add(new ScriptBundle("~/Scripts/UtilityJS").Include("~/Scripts/UtilityJS/Utility.js"));
+
+            bundles.Add(new StyleBundle("~/Content/jqueryuicss").Include
+                (
+                        "~/Content/themes/base/jquery.ui.core.css",
+                        "~/Content/themes/base/jquery.ui.all.css",
+                        "~/Content/themes/base/jquery.ui.base.css",
+                          "~/Content/themes/base/jquery.ui.theme.css",
+                        "~/Content/themes/base/jquery.ui.resizable.css",
+                        "~/Content/themes/base/jquery.ui.selectable.css",
+                        "~/Content/themes/base/jquery.ui.accordion.css",
+                        "~/Content/themes/base/jquery.ui.autocomplete.css",
+                        "~/Content/themes/base/jquery.ui.button.css",
+                        "~/Content/themes/base/jquery.ui.dialog.css",
+                        "~/Content/themes/base/jquery.ui.slider.css",
+                        "~/Content/themes/base/jquery.ui.tabs.css",
+                        "~/Content/themes/base/jquery.ui.datepicker.css",
+                        "~/Content/themes/base/jquery.ui.progressbar.css",
+                        "~/Content/themes/base/jquery.calendars.picker.css"
+                ));
+
+
+            bundles.Add(new StyleBundle("~/Styles/cssbootstrap").Include
+                 (
+                   "~/Content/css/bootstrap.min.css",
+                "~/Content/css/jquery.mCustomScrollbar.css"
+                 ));
+            bundles.Add(new StyleBundle("~/Styles/css").Include
+                (
+                     "~/Content/css/font-awesome.min.css",
+                       "~/Content/css/style.css",
+                      "~/Content/css/john-deere-theme.css"
+               ));
+
+            bundles.Add(new StyleBundle("~/Styles/dataTablescss")
+                   .Include("~/Content/dataTables1.10.6/jquery.dataTables.css"));
+
+            bundles.Add(new ScriptBundle("~/bundles/alphanumeric").Include
+                (
+                      "~/Scripts/jquery.alphanumeric.js"
+                      ));
+
+            bundles.Add(new ScriptBundle("~/bundles/ConfirmBox").Include("~/Scripts/jquery.confirm.js"));
+            bundles.Add(new StyleBundle("~/Styles/confirmboccss").
+            Include("~/Content/Confirm_Style.css", "~/Content/jquery.confirm.css"));
+
+            BundleTable.EnableOptimizations = false;
+
+            bundles.Add(new ScriptBundle("~/bundles/jquery").Include
+                (
+                      "~/Scripts/jquery1.8.1.min.js",
+                      "~/Scripts/jquery.calendars.js",
+                      "~/Scripts/jquery.calendars.plus.js",
+                      "~/Scripts/jquery.calendars.picker.js",
+                      "~/Scripts/bootstrap-tabcollapse.js",
+                      "~/Scripts/metisMenu.js",
+                      "~/Scripts/pdp-menu.js"
+                ));
+
+            bundles.Add(new ScriptBundle("~/bundles/dataTablejs").Include(
+                "~/Scripts/Datatable1.10.6/jquery.dataTables.js",
+                "~/Scripts/Datatable1.10.6/pagingPlugins.js",
+                    "~/Scripts/Datatable1.10.6/fnMultiFilter.js"));
+
+
+
+            bundles.Add(new ScriptBundle("~/Scripts/HighCharts").Include(
+                "~/Scripts/Highcharts-4.0.1/js/highcharts-all.js", "~/Scripts/Highcharts-4.0.1/js/modules/funnel.js",
+               "~/Scripts/Highcharts-4.0.1/js/modules/solid-gauge.js", "~/Scripts/Highcharts-4.0.1/js/modules/drilldown.js"
+               , "~/Scripts/Highcharts-4.0.1/js/no-data-to-display.js"
+               ));
+
+            bundles.Add(new StyleBundle("~/Styles/mCustomScrollbar").Include("~/Content/CustomScrollbar/jquery.mCustomScrollbar.css"));
+            bundles.Add(new ScriptBundle("~/bundles/mCustomScrollbarJs").Include("~/Content/CustomScrollbar/jquery.mCustomScrollbar.concat.min.js"));
+
+            bundles.Add(new ScriptBundle("~/bundles/CustomPopupScript").Include("~/Scripts/jquery-confirm.js"));
+            bundles.Add(new StyleBundle("~/Styles/CustomPopupCss").Include("~/Content/css/jquery-confirm.css"));
+
+            bundles.Add(new ScriptBundle("~/Scripts/UtilityJStableHeadFixerJs").Include("~/Scripts/UtilityJS/tableHeadFixer.js")); 
+ 
+            bundles.Add(new ScriptBundle("~/Scripts/DropZoneJS").Include("~/Scripts/dropzone/dropzone.js" , "~/Scripts/dropzone/dropzone-amd-module.js")); 
+            bundles.Add(new StyleBundle("~/Styles/DropZoneCss").Include("~/Scripts/dropzone/basic.css" , "~/Scripts/dropzone/dropzone.css"));
+
+            bundles.Add(new StyleBundle("~/Scripts/TableHeaderFixedCss").Include("~/Scripts/TableHeaderFixed/fixedColumns.dataTables.min.css", "~/Scripts/TableHeaderFixed/jquery.dataTables.min.css"));
+            bundles.Add(new ScriptBundle("~/Scripts/TableHeaderFixedJS").Include("~/Scripts/TableHeaderFixed/dataTables.fixedColumns.min.js"));
+        }
+    }
+}
