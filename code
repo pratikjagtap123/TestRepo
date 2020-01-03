@@ -1,0 +1,49 @@
+[CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult DownloadDocsFile(int RecordId, string FilePath)
+        {
+            try
+            {
+                string fileName = Path.GetFileName(FilePath);
+                string fileExtention = Path.GetExtension(FilePath);
+                var fileStream = new FileStream(FilePath, FileMode.Open, FileAccess.Read);
+                HttpContext.Response.AddHeader("content-disposition", "inline;filename=" + fileName);
+                var fsResult = new FileStreamResult(fileStream, fileExtention);
+                return fsResult;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        
+        
+        
+        
+        if (model.UploadAgreementDocFile != null && model.UploadAgreementDocFile.ContentLength > 0)
+            {
+                string UploadFilePath = "";
+                if (string.IsNullOrEmpty(model.AgreementDocFile))
+                    UploadFilePath = ConfigurationManager.AppSettings[CommonKeys.INSTLLATIONDOCSPATH].ToString() + "Dealer" + model.RecordId.ToString() + '\\' + ConfigurationManager.AppSettings[CommonKeys.AGREEMENTDOCUMENT].ToString();
+                else
+                {
+                    string fileExt = Path.GetFileName(model.AgreementDocFile);
+                    UploadFilePath = model.AgreementDocFile.Remove(model.AgreementDocFile.IndexOf(fileExt));
+                }
+
+                string fileExtension = Path.GetExtension(model.UploadAgreementDocFile.FileName);
+                string fullname = model.UploadAgreementDocFile.FileName;
+
+                FileHandle fileHandle = new FileHandle();
+                fileHandle.FileName = fullname;
+                fileHandle.MIMEType = model.UploadAgreementDocFile.ContentType;
+                fileHandle.FilePath = UploadFilePath;
+                fileHandle.Content = model.UploadAgreementDocFile.InputStream;
+
+                string returnFilePath = "", returnErrorMsg = "";
+                // Upload  File Path  Pass ref variable as  ref returnFilePath  for full file path and returnErrorMsg error message if any 
+                FileHandler fHandler = new FileHandler();
+                fHandler.UploadFile(fileHandle, ref returnFilePath, ref returnErrorMsg);
+
+                model.AgreementDocFile = UploadFilePath + model.UploadAgreementDocFile.FileName;
+            }
