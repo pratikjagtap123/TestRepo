@@ -1,0 +1,162 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Net.Mail;
+using System.Net.Mime;
+using System.Web;
+using System.Xml;
+using System.Configuration;
+namespace DOAE.COMMON
+{
+    public class EmailSender
+    {
+        public string From { get; set; }
+        public string To { get; set; }
+        public string CC { get; set; }
+        public string BCC { get; set; }
+        public string Subject { get; set; }
+        public string Body { get; set; }
+        public bool IsBodyHtml { get; set; }
+        public bool IsFileAttached { get; set; }
+        public bool IsEmailsend { get; set; }
+        public List<string> AttachedFilePath { get; set; }
+        private const string SMTP_HOST = "SMTP_HOST";
+        private const string SENDMAIL_SMTPUSERNAME = "SENDMAIL_SMTPUSERNAME";
+        private const string SENDMAIL_SMTPUSERPASSWORD = "SENDMAIL_SMTPUSERPASSWORD";
+        private const string IS_SEND_EMAIL = "SendEmail";
+        private const string EMAIL_TEMPLATE_PATH = "EmailTemplatePath";
+        private string strIsSendEmail = string.Empty;
+
+        public EmailSender(string constFrom, string constTo, string constCC, string constSubject, string constBody)
+        {
+            this.From = constFrom;
+            this.To = constTo;
+            this.CC = constCC;
+            this.Subject = constSubject;
+            this.Body = constBody;
+            this.IsEmailsend = false;
+            IsFileAttached = false;
+        }
+
+        public void SendEmail()
+        {
+            MailMessage mailInfo = new MailMessage();
+            if (this.To.Contains(';'))
+            {
+                foreach (var email in this.To.Split(';'))
+                {
+                    if (!string.IsNullOrWhiteSpace(email) &&  Validator.IsValidEmailAddress(email))
+                        mailInfo.To.Add(email);
+                }
+            }
+            else if (this.To.Contains(','))
+            {
+                foreach (var email in this.To.Split(','))
+                {
+                    if (!string.IsNullOrWhiteSpace(email) &&  Validator.IsValidEmailAddress(email))
+                        mailInfo.To.Add(email);
+                }
+            }
+            else
+                if ( Validator.IsValidEmailAddress(this.To))
+                    mailInfo.To.Add(this.To);
+
+            if (  Validator.IsValidEmailAddress(this.From))
+                mailInfo.From = new MailAddress(this.From);
+            
+            //If there is missing TO or FROM address then do not send email. And log warning.
+            if (mailInfo.From == null || string.IsNullOrWhiteSpace(mailInfo.From.Address) || mailInfo.To.Count == 0)
+            {
+                //var jsonStr = JsonConvert.SerializeObject(this);
+                //Logger.Warning("While sending email, few arguments were missing. Please see Json object below and investigate. " + jsonStr, Logger.LogFileType.ApplicationLog);
+                return;
+            }
+
+            mailInfo.Subject = this.Subject;
+            mailInfo.Body = this.Body;
+            mailInfo.IsBodyHtml = this.IsBodyHtml;
+
+            SmtpClient smtp = new SmtpClient();
+            smtp.Host = ConfigurationManager.AppSettings[SMTP_HOST].ToString(); //CommonKeys.SMTP_HOST; 
+            smtp.Credentials = new System.Net.NetworkCredential(ConfigurationManager.AppSettings[SENDMAIL_SMTPUSERNAME].ToString(),
+            ConfigurationManager.AppSettings[SENDMAIL_SMTPUSERPASSWORD].ToString());
+            strIsSendEmail = ConfigurationManager.AppSettings[IS_SEND_EMAIL].ToString();
+
+            //smtp.Port = Convert.ToInt32(ConfigurationManager.AppSettings["SMTP_PORT"].ToString());
+            //smtp.EnableSsl = true;
+            
+            //for CC
+            if (!string.IsNullOrEmpty(this.CC))
+            {
+                if (this.CC.Contains(';'))
+                {
+                    foreach (var email in this.CC.Split(';'))
+                    {
+                        if (!string.IsNullOrWhiteSpace(email) &&  Validator.IsValidEmailAddress(email))
+                            mailInfo.CC.Add(email);
+                    }
+                }
+                else if (this.CC.Contains(','))
+                {
+                    foreach (var email in this.CC.Split(','))
+                    {
+                        if (!string.IsNullOrWhiteSpace(email) &&  Validator.IsValidEmailAddress(email))
+                            mailInfo.CC.Add(email);
+                    }
+                }
+                else
+                    if ( Validator.IsValidEmailAddress(this.CC))
+                        mailInfo.CC.Add(this.CC);
+            }
+
+            //for BCC
+            if (!string.IsNullOrEmpty(this.BCC))
+            {
+                if (this.BCC.Contains(';'))
+                {
+                    foreach (var email in this.BCC.Split(';'))
+                    {
+                        if (!string.IsNullOrWhiteSpace(email) &&  Validator.IsValidEmailAddress(email))
+                            mailInfo.Bcc.Add(email);
+                    }
+                }
+                else if (this.BCC.Contains(','))
+                {
+                    foreach (var email in this.BCC.Split(','))
+                    {
+                        if (!string.IsNullOrWhiteSpace(email) &&  Validator.IsValidEmailAddress(email))
+                            mailInfo.Bcc.Add(email);
+                    }
+                }
+                else
+                    if ( Validator.IsValidEmailAddress(this.BCC))
+                        mailInfo.Bcc.Add(this.BCC);
+            }
+
+            if (IsFileAttached)
+            {
+                foreach (string file in AttachedFilePath)
+                {
+                    if (!string.IsNullOrEmpty(file))
+                    {
+                        Attachment attach = new Attachment(file, MediaTypeNames.Application.Octet);
+                        mailInfo.Attachments.Add(attach);
+                    }
+                }
+            }
+            if (strIsSendEmail == "1")
+            {
+                smtp.Send(mailInfo);
+                if (mailInfo.Attachments != null)
+                {
+                    mailInfo.Attachments.Dispose();
+                }
+            }
+            IsEmailsend = true;
+        }
+
+        
+    }
+}
