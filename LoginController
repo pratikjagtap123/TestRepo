@@ -1,0 +1,266 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using DOAE.MODEL;
+using DOAE.DAL;
+using DOAE.CORE;
+using DOAE.COMMON;
+using System.Web.Mvc;
+using System.Web.Security;
+using Microsoft.Owin.Security.Cookies;
+using Okta.AspNet;
+using Owin;
+using System.Xml;
+using System.Configuration;
+
+namespace DOAE.Controllers
+{
+    [OktaAuthorize]
+    public class LoginController : Controller
+    {
+        IFileHandler _IFileHandler = null;
+        IUserService _IUserService = null;
+        IRoleFeatureService _IRoleFeatureService  = null;
+        IEmailService _IEmailService = null;
+        InstallationRequestService _InstallationRequestService = null;
+        TrackerCheckListService _TrackerCheckListService = null;
+
+        public LoginController(IFileHandler IFileHandler , IRoleFeatureService IRoleFeatureService  ,IUserService IUserService
+            , IEmailService IEmailService , InstallationRequestService InstallationRequestService  , TrackerCheckListService TrackerCheckListService)
+        {
+            _IFileHandler = IFileHandler;
+            _IUserService = IUserService;
+            _IRoleFeatureService = IRoleFeatureService;
+              _IEmailService =  IEmailService;
+            _InstallationRequestService = InstallationRequestService;
+            _TrackerCheckListService = TrackerCheckListService;
+
+        }
+        // GET: Login chnaged
+        public ActionResult Index()
+        {
+            return View();
+        }
+        public ActionResult Login()
+        {
+            if (!MvcApplication.OktaEnable)
+            {
+                FormsAuthentication.SignOut();
+            }
+            JDDOASession.ClearSession();
+            JDDOASession.AbandonSession();
+            return View();
+        }
+        public ActionResult OktaCallBack()
+        {
+            User objModal = new User();
+            //if (objReturn != null && objReturn.UserId != null)
+            //{
+            //    List<UserRole> lstUserRoles = new List<UserRole>();
+            //    UserRole objRole = new UserRole();
+            //    objRole.UserId = Convert.ToInt32(objReturn.UserId);
+            //    lstUserRoles = _IUserRoleService.GetAll(objRole).ToList();
+            //    objReturn.UserRoles = lstUserRoles;
+            //    RoleFeatures objRoleFeature = new RoleFeatures();
+            //    objRoleFeature.UserId = objReturn.UserId;
+            //    List<RoleFeatures> lstFeatuers = _IRoleFeatureService.GetAll(objRoleFeature).ToList();
+            //    objReturn.RoleFeatures = lstFeatuers;
+            //    CreateTimeNode(objReturn);
+            //    if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+            //    {
+            //        JDDOASession.RemoveSessionItem(SessionKeys.CurrentUser);
+            //    }
+            //    JDDOASession.AddSessionItem(SessionKeys.CurrentUser, objReturn);
+            //    if (CustomeHelpers.IsDealerUser())
+            //    {
+            //        return RedirectToAction("ActiveSchemes", "DealerScheme");
+            //    }
+            //    else if (CustomeHelpers.IsTerritoryManager())
+            //    {
+            //        return RedirectToAction("ManageDBMDiscreationary", "DBMDiscreationary");
+            //    }
+            //    else
+            //    {
+            //        return RedirectToAction("Dashboard", "Home");
+            //    }
+            //}
+            //else
+            //{
+            //    TempData["ErrLogin"] = "Invalid Username or Password";
+            //    return View(objModal);
+            //}
+            return View(objModal);
+        }
+        public ActionResult LogOut()
+        {
+            if (MvcApplication.OktaEnable)
+            {
+                HttpContext.GetOwinContext().Authentication.SignOut(
+                CookieAuthenticationDefaults.AuthenticationType, OktaDefaults.MvcAuthenticationType);
+            }
+            else
+            {
+                FormsAuthentication.SignOut();
+            }
+            if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+            {
+                JDDOASession.RemoveSessionItem(SessionKeys.CurrentUser);
+            }
+            JDDOASession.ClearSession();
+            JDDOASession.AbandonSession();
+            return RedirectToAction("Login", "Login");
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        public ActionResult Login(User objUser)
+        {
+            User objLoggedinUser = new DOAE.MODEL.User();
+            objUser.ApplicationCode = Common_Constant.APPLICATION_CODE;
+            objLoggedinUser = _IUserService.CheckLogin(objUser);  
+            if (objLoggedinUser != null && objLoggedinUser.UserId != null) 
+            {
+                RoleFeatures objRoleFeature = new RoleFeatures();
+                objRoleFeature.ApplicationCode = Common_Constant.APPLICATION_CODE;
+                objRoleFeature.UserRacfId = objLoggedinUser.Login;
+                List<RoleFeatures> lstFeatuers = _IRoleFeatureService.GetAll(objRoleFeature).ToList(); 
+                objLoggedinUser.RoleFeatures = lstFeatuers;
+                CreateTimeNode(objLoggedinUser); 
+
+
+                if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+                {
+                    JDDOASession.RemoveSessionItem(SessionKeys.CurrentUser);
+                }
+                JDDOASession.AddSessionItem(SessionKeys.CurrentUser, objLoggedinUser);
+                FormsAuthentication.SetAuthCookie(objUser.Login, true);
+                if (lstFeatuers!=null && lstFeatuers.Count > 0 && lstFeatuers.Where(x=>x.FeatureId== RoleFeatures_Constants.DASHBOARD).Count() > 0)
+                {
+                    return RedirectToAction("Dashboard", "Home");
+                }
+                else if (lstFeatuers != null && lstFeatuers.Count>0)
+                {
+                    var urlItem = lstFeatuers.Where(x => x.ActionName!=null && x.ControllerName != null).OrderBy(x=>x.Sequence).FirstOrDefault();
+                    return RedirectToAction(urlItem.ActionName, urlItem.ControllerName, new { CurrentPageid = urlItem.FeatureId, PfID = urlItem.ParentFeatureId });
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "You are not Authorized for this system. Please contact to Administrator.";
+                }                
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Please enter valid username and password";
+            }
+            return View(objUser);
+        }
+        public void CreateTimeNode(User user)
+        {
+            //bool isReadDateFromXML = (user.RoleId.ToString().Equals(UserRoleId.ADMINISTRATOR)) ?
+            //    Convert.ToBoolean(ConfigurationManager.AppSettings[CommonKeys.ReadTimeFromXML_ForAdmin])
+            //    : Convert.ToBoolean(ConfigurationManager.AppSettings[CommonKeys.ReadTimeFromXML]); 
+            bool isReadDateFromXML =   Convert.ToBoolean(ConfigurationManager.AppSettings[CommonKeys.ReadTimeFromXML]);
+            if (isReadDateFromXML)
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.Load(Server.MapPath("~/XML/SystemDateTime.xml"));
+                XmlNode contentnode = doc.SelectSingleNode("//SystemTiming/Timing[@UserId='" + Convert.ToString(user.UserId) + "']");
+                if (contentnode == null)
+                {
+                    XmlElement node = doc.CreateElement("Timing");
+                    DateTime dt = DateTime.Now;
+                    node.SetAttribute("UserId", Convert.ToString(user.UserId));
+                    node.SetAttribute("CurrentDate", dt.ToShortDateString());
+                    node.SetAttribute("CurrentHour", "01");
+                    node.SetAttribute("CurrentMinute", "00");
+                    doc.DocumentElement.AppendChild(node);
+                    doc.Save(Server.MapPath("~/XML/SystemDateTime.xml"));
+                }
+            }
+        }
+      
+
+        [HttpGet]
+        public ActionResult ImpersonateUser()
+        {
+            return PartialView("_ImpersonateUser");
+        }
+        [HttpPost]
+        public ActionResult ImpersonateUser(User objUser)
+        {
+            objUser.ApplicationCode = Common_Constant.APPLICATION_CODE;
+            User objLoggedinUser = _IUserService.Impersonate(objUser); 
+            if (objLoggedinUser != null && objLoggedinUser.UserId != null)
+            {
+                RoleFeatures objRoleFeature = new RoleFeatures();
+                objRoleFeature.UserRacfId = objLoggedinUser.Login;
+                objRoleFeature.ApplicationCode = Common_Constant.APPLICATION_CODE;
+                List<RoleFeatures> lstFeatuers = _IRoleFeatureService.GetAll(objRoleFeature).ToList();
+                objLoggedinUser.RoleFeatures = lstFeatuers;
+                CreateTimeNode(objLoggedinUser);
+                Session["Impersonate"] = true;
+                Session["IsClereLocalStorage"] = true;  
+
+                if(JDDOASession.IsInSession(SessionKeys.CurrentUser))
+                {
+                    JDDOASession.RemoveSessionItem(SessionKeys.CurrentUser);
+                }
+                JDDOASession.AddSessionItem(SessionKeys.CurrentUser, objLoggedinUser);
+                string UrlRed = "";
+                if (lstFeatuers != null && lstFeatuers.Count > 0 && lstFeatuers.Where(x => x.FeatureId == RoleFeatures_Constants.DASHBOARD).Count() > 0)
+                {
+                    UrlRed = ConfigurationManager.AppSettings["LoginUrl"] + "Home/Dashboard" ;
+                }
+                else if (lstFeatuers != null && lstFeatuers.Count > 0)
+                {
+                    var urlItem = lstFeatuers.Where(x => x.ActionName != null && x.ControllerName != null).OrderBy(x => x.Sequence).FirstOrDefault();
+
+                    UrlRed = ConfigurationManager.AppSettings["LoginUrl"]  + urlItem.ControllerName + "/" + urlItem.ActionName;
+
+                    // return RedirectToAction(urlItem.ActionName, urlItem.ControllerName, new { CurrentPageid = urlItem.FeatureId, PfID = urlItem.ParentFeatureId });
+                }
+                var Url1 = new { url = UrlRed };
+                return Json(Url1, JsonRequestBehavior.AllowGet);
+            }
+            else
+            {
+                var result1 = new { ErrorMessage = "Please enter valid Racf ID" };
+                return Json(result1, JsonRequestBehavior.AllowGet);
+            }
+        }
+        public  void SendEmails()
+        {
+            // _IEmailService.SendExitESclationEmail(); 
+            InstallationRequest installationRequest = new InstallationRequest();
+            List<InstallationRequest> installationRequests = _InstallationRequestService.SendCodeBlockingEmails(installationRequest).ToList(); ;
+
+            foreach (InstallationRequest objINst in installationRequests)
+            {
+                _IEmailService.SendCodeBlockingReminderEmails(objINst);
+            }
+            //_IEmailService.SendDeviationActionItemsReminderEmails();
+            //    TrackerCheckList ent = new TrackerCheckList();
+            //    ent.SystemDate = Utility.GetTimingList();
+            //    _TrackerCheckListService.Send7DayReminder(ent);
+        }
+        [HttpPost]
+        public ActionResult  SendReminderEmails()
+        {
+            TrackerCheckList ent = new TrackerCheckList();
+            ent.SystemDate = Utility.GetTimingList();
+            _TrackerCheckListService.Send7DayReminder(ent);
+            _IEmailService.SendExitESclationEmail();
+
+            InstallationRequest installationRequest = new InstallationRequest();
+            List<InstallationRequest> installationRequests = _InstallationRequestService.SendCodeBlockingEmails(installationRequest).ToList(); ;
+            foreach (InstallationRequest objINst in installationRequests)
+            {
+                _IEmailService.SendCodeBlockingReminderEmails(objINst);
+            }
+             _IEmailService.SendDeviationActionItemsReminderEmails();
+            TempData["ServiceMessage"] = "Email has been sent sucessfully";
+            return RedirectToAction("Login" , "Login");
+        }
+    }
+}
