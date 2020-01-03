@@ -1,0 +1,85 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.OleDb;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web;
+namespace DOAE.COMMON
+{
+   public class FileHandle
+    {
+        public string FileId { get; set; }
+        public string FileName { get; set; }
+        public string MIMEType { get; set; }
+        public string FilePath { get; set; }
+        public Stream Content { get; set; }
+        public Int64 ContentLength { get; set; }
+        public HttpPostedFileBase File { get; set; }
+        public DataSet ReadExcelToTable(string excelFilePath)
+        {
+            if (!string.IsNullOrEmpty(excelFilePath))
+            {
+                DataSet ds = new DataSet();
+                string filename = System.IO.Path.GetFileName(excelFilePath);
+                string fileExtension = System.IO.Path.GetExtension(filename);
+                if (fileExtension == ".xls" || fileExtension == ".xlsx")
+                {
+                    string excelConnectionString = string.Empty;
+                    excelConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" +
+                    excelFilePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
+                    //if (fileExtension == ".xls")
+                    //{
+                    //    excelConnectionString = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" +
+                    //    excelFilePath + ";Extended Properties=\"Excel 8.0;HDR=Yes;IMEX=2\"";
+                    //}
+                    ////connection String for xlsx file format.
+                    //else if (fileExtension == ".xlsx")
+                    //{
+                    //    excelConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" +
+                    //    excelFilePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
+                    //}
+                    if (fileExtension == ".xlsx" || fileExtension == ".xls")
+                    {
+                        excelConnectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" +
+                        excelFilePath + ";Extended Properties=\"Excel 12.0;HDR=Yes;IMEX=2\"";
+                    }
+
+                    //Create Connection to Excel work book and add oledb namespace
+                    OleDbConnection excelConnection = new OleDbConnection(excelConnectionString);
+                    excelConnection.Open();
+                    DataTable dt = new DataTable();
+                    dt = excelConnection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
+                    if (dt == null)
+                    {
+                        return null;
+                    }
+                    String[] excelSheets = new String[dt.Rows.Count];
+                    int t = 0;
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        excelSheets[t] = row["TABLE_NAME"].ToString();
+                        t++;
+                    }
+                    OleDbConnection excelConnection1 = new OleDbConnection(excelConnectionString);
+                    if (excelSheets.Length > 0)
+                    {
+                        string query = string.Format("Select * from [{0}]", excelSheets[0]);
+                        using (OleDbDataAdapter dataAdapter = new OleDbDataAdapter(query, excelConnection1))
+                        {
+                            dataAdapter.Fill(ds);
+                        }
+                    }
+                    excelConnection.Close();
+                    excelConnection.Dispose();
+                    excelConnection1.Close();
+                    excelConnection1.Dispose();
+                }
+                return ds;
+            }
+            return null;
+        }
+    }
+}
