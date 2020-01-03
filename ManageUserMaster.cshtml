@@ -1,0 +1,739 @@
+@model DOAE.MODEL.UserMaster
+@using DOAE.MODEL
+@using DOAE.COMMON
+@using System.Web.Optimization;
+@using System.Configuration;
+@{
+    ViewBag.Title = "Manage Users";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    SelectList selListDesignations = ViewBag.selListDesignations;
+
+    SelectList DealerList = ViewBag.DealerList;
+    SelectList StateList = ViewBag.StateList;
+
+    SelectList lstDivisions = ViewBag.lstDivisions;
+    SelectList stateList = ViewBag.stateList;
+
+    SelectList selListRoles = ViewBag.selListRoles;
+
+    string imgEditPath = Url.Content("~/Images/edit.png");
+    User LoggedInUser = new User();
+    if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+    {
+        LoggedInUser = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+    }
+    int UserId = Convert.ToInt32(LoggedInUser.UserId);
+
+    SelectList selLst_ActiveStatus = new SelectList(new List<SelectListItem>() {
+        new SelectListItem(){ Value="2",Text="- All -"},
+        new SelectListItem(){ Value="1",Text="Active"},
+        new SelectListItem(){ Value="0",Text="Inactive"}
+    }, "Value", "Text");
+    //int Pagesize = Convert.ToInt32(ConfigurationManager.AppSettings["MasterPageSize"]);
+}
+
+@Scripts.Render("~/bundles/ConfirmBox")
+    <style>
+        .ui-dialog {
+            top: 10% !important
+        }
+    </style>
+
+@using (Html.BeginForm("ExportUsers", "UserMaster", FormMethod.Post, new { enctype = "multipart/form-data", id = "frmUser" }))
+{
+    <div class="innerContent">
+        <h3>Manage Users</h3>
+        <div class="innerContentBox">
+            <div class="innerContentBoxPadding">
+                <div class="row pnalSearchBox SetupPnalSearchBox" id="pnlSearch">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <div class="row">
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">Division</label>
+                                    <div class="calIcon">
+                                        @*@Html.DropDownListFor(x => Model.Division, lstDivisions, "- All -", new { @id = "ddlDivisionID", @class = "form-control input-sm borderRadiusNone" })*@
+                                        @Html.DropDownList("Division", lstDivisions, "- All -", new { @id = "lstDivisionCodes", @class = "form-control input-sm borderRadiusNone" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">State</label>
+                                    @Html.DropDownList("State", stateList, "- All -", new { @id = "lstStateCodes", @class = "form-control input-sm borderRadiusNone" })
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">Dealership</label>
+                                    @Html.DropDownList("DealerCode", new List<SelectListItem>() { new SelectListItem() { Value = "", Text = "- All -" } }, new { @id = "lstDealerCodes", @class = "form-control input-sm borderRadiusNone" })
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">User Id</label>
+                                    <div class="calIcon">
+                                        @Html.TextBoxFor(x => Model.User_Id, new { @id = "txtUser_Id", @class = "form-control input-sm" })
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">User Name</label>
+                                    <div class="calIcon">
+                                        @Html.TextBoxFor(x => Model.DisplayName, new { @id = "txtDisplayName", @class = "form-control input-sm" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">Email Id</label>
+                                    <div class="calIcon">
+                                        @Html.TextBoxFor(x => Model.EmailAddress, new { @id = "txtEmailAddress", @class = "form-control input-sm" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">Designation</label>
+                                    @Html.DropDownListFor(x => Model.DesignationCode, selListDesignations, "- All -", new { @id = "ddlDesignation", @class = "form-control input-sm borderRadiusNone" })
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">Status</label>
+                                    @*@Html.DropDownListFor(x => Model.IsActive, selLst_ActiveStatus,"- All -", new { @id = "ddlActiveStatus", @class = "form-control input-sm borderRadiusNone" })*@
+                                    @Html.DropDownListFor(x => Model.IsActive, selLst_ActiveStatus, new { @id = "ddlActiveStatus", @class = "form-control input-sm borderRadiusNone" })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="setupBtnWrapp">
+                                <div class="form-group">
+                                    <button type="button" class="btn btnLogin" id="btnActivate">Active</button>
+                                    <button type="button" class="btn btnLogin" id="btnInActivate">InActive</button>
+                                </div>
+                                <div class="form-group pull-right">
+                                    @*<button type="button" class="btn btnLogin" id="btnUploadUser">Upload User </button> &nbsp;*@
+                                    <a href="@Url.Action("UploadNewUser", "UserMaster")" class="btn btnLogin pull-right">Upload User</a>
+                                    <button type="button" class="btn btnSearch" id="btnSearch">Search </button> &nbsp;
+                                    <button type="button" class="btn btnLogin" id="btnClear">Clear</button>
+                                    <button type="button" class="btn btnLogin" id="btnAddUser">Add User</button>
+                                    <button type="Submit" class="btn btnLogin" name="Submit" value="ExportExcel" id="btnUserExportToExcel">Export to Excel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="fromFooter">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12 col-sm-12 col-md-12 col-xs-12">
+                        <div class="">
+                            <div id="divDataTable_length"></div>
+                            <div class="jd-table table-responsive manageUsersHW">
+                                <table id="myDataTable" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr class="uppercaseText">
+                                            <th><input type='checkbox' id='chkHeader' name="chkAll" class='selectAll' /></th>
+                                            <th>Edit</th>
+                                            <th>Status</th>
+                                            <th>Area Of Responsibility</th>
+                                            <th>Division</th>
+                                            <th>State</th>
+                                            <th>User Name</th>
+                                            <th>User Id</th>
+                                            <th>Dealer Sap Code</th>
+                                            <th>Dealer Name</th>
+                                            <th>Designation</th>
+                                            <th>Display Designation</th>
+                                            <th>Role</th>
+                                            <th>Email Id</th>
+                                            <th>Contact Number</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div id="divdataTables_info"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $("#myDataTable").tableHeadFixer({ "head": true, "top": 1 });
+
+        $('#txtUser_Id').rules('remove', 'required');
+        $('#txtDisplayName').rules('remove', 'required');
+        $('#txtEmailAddress').rules('remove', 'required');
+        $('#txtEmailAddress').rules('remove');//, 'regularExpression');
+        $('#ddlDesignation').rules('remove', 'required');
+        $('#ddlActiveStatus').rules('remove', 'required');
+
+        $('#lstDivisionCodes').rules('remove', 'required');
+        $('#lstStateCodes').rules('remove', 'required');
+        $('#lstDealerCodes').rules('remove', 'required');
+
+        var _userId=@UserId;
+        var mytable = $('#myDataTable').dataTable({
+            "ajax": {
+                //"rowId": "PlanId",
+                "url": "@Url.Content("~/UserMaster/FillTable_User")",
+                "type": "POST",
+                "error":function (x, y, z) {
+                    handleAjaxRequestSessionTimeout(x, y, z);
+                },
+                "dataSrc": function (json) {
+                    //Make your callback here.
+                    if (json.Columns != null && json.Columns.length > 0) {
+                        for (var i = 0; i < json.Columns.length; i++) {
+                            if (json.Columns[i].ColName == "DisplayName")
+                                $("#txtDisplayName").val(json.Columns[i].ColValue);
+                            else if (json.Columns[i].ColName == "DesignationCode")
+                                $("#ddlDesignation").val(json.Columns[i].ColValue);
+                            else if (json.Columns[i].ColName == "IsActive")
+                                $("#ddlActiveStatus").val(json.Columns[i].ColValue);
+                            else if (json.Columns[i].ColName == "EmailAddress")
+                                $("#txtEmailAddress").val(json.Columns[i].ColValue);
+                            else if (json.Columns[i].ColName == "User_Id")
+                                $("#txtUser_Id").val(json.Columns[i].ColValue);
+
+                        }
+                    }
+                    if (json.IsResetPaging) {
+                        mytable.fnPageChange(0);
+                    }
+                    return json.data;
+                }
+            },
+            "aaSorting": [[0, 'asc']],
+            @*"iDisplayLength": @Pagesize,*@
+            "serverSide": true,
+            "bStateSave": true,
+            "pagingType": "listbox",  //pagination type using pulgin
+            "processing": false,
+            "sDom": 'lrtip',
+            "bDeferRender": true,//hide the default search filter textbox by removing "f"
+            "aoColumns":
+            [
+                {
+                    "data": "UserId", "sName": "", "orderable": false, "mRender": function (data, type, full) {
+
+                        return "<input type='checkbox' name='nmUser' id='chkuser' value=" + data + " class='chkclass'>";
+                    }
+                },
+                {
+                    "data": "UserId", "sName": "", "orderable": false, "mRender": function (data, type, full) {
+                        if (data != null) {
+                            return "<div><a href='@Url.Content("~/UserMaster/AddEditUserMaster")?userId=" + data + "&isAddNew=false' data-dialog-title='Edit User'  class='openPopUp_AddEditUser' ><img src='@imgEditPath' title='Edit' /></a></div>";
+                        }
+                    }
+                },
+                {
+                    "data": "ActiveStatus", "sName": "IsActive", "orderable": true, "mRender": function (data, type, full) {
+                        if (data != null) {
+                            if(_userId==full.UserId)
+                            {
+                                return "<div>" + data + "</div>";
+                            }else{
+                                return "<div><u><a class='changeActiveStatus' href='@Url.Content("~/UserMaster/ChangeUserStatus")?userId=" + full.UserId + "&isActive=" + full.IsActive + "' title='Change Status' >" + data + "</a></u></div>";
+                            }
+
+                        }
+                    }
+                },
+                {
+                    "data": "UserId", "sName": "", "orderable": false, "mRender": function (data, type, full) {
+                        if (data != null) {
+                            if (full.Role_Code == 0) {
+                                return "<div></div>";
+                            }
+                            else {
+                                return "<div><u><a href='@Url.Content("~/UserMaster/AreaOfResponsibility")?userId=" + data + "' data-dialog-title='AOR' title='Area Of Responsibility'>AOR</a></u></div>";
+                            }
+                        }
+                    }
+                },
+
+                   //{ "data": "Division", "sName": "Division"},
+                   {
+                       "data": "Division", "sName": "Division", "orderable": true, "mRender": function (data, type, full) {
+                           if (data != null) {
+                               if (full.Division!=0) {
+                                   return "<div>" + full.Division + "</div>";
+                               }
+                               else{
+                                   return "<div></div>";
+                               }
+                           }
+                           else{
+                                   return "<div></div>";
+                               }
+                       }
+                   },
+
+                { "data": "StateName", "sName": "StateName"},
+                { "data": "DisplayName", "sName": "DisplayName" },
+                { "data": "User_Id", "sName": "User_Id" },
+                { "data": "DealerSapCode", "sName": "DealerSapCode" },
+                { "data": "DealerName", "sName": "DealerName" },
+                { "data": "DesignationName", "sName": "DesignationCode" },
+                { "data": "DisplayDesignation", "sName": "DisplayDesignation" },
+                { "data": "Role_Name", "sName": "Role_Code" },
+                { "data": "EmailAddress", "sName": "EmailAddress" },
+                { "data": "ContactNumber", "sName": "ContactNumber" },
+
+                 @*Hidden columns*@
+                { "data": "Name", "sName": "Name", "visible": false },
+            { "data": "StateCode", "sName": "StateCode", "visible": false },
+            //{ "data": "TM", "sName": "TM", "visible": false },
+            { "data": "DealerCode", "sName": "DealerCode", "visible": false }
+
+            ]
+            ,
+            "fnDrawCallback": function (oSettings) {
+                if ($("input[name='nmUser']").length == $("input[name='nmUser']:checked").length && $("input[name='nmUser']:checked").length > 0) {
+                    $("#chkHeader").attr("checked", "checked");
+                }
+                else {
+                    $("#chkHeader").removeAttr("checked");
+                }
+            }
+        });
+
+        mytable.on('order.dt', function () { $('.dataTables_paginate,.dataTables_info').show(); });
+        mytable.on('length.dt', function (e, settings, len) { $('.dataTables_paginate,.dataTables_info').show(); });
+
+
+        $("#divDataTable_length").append($(".dataTables_length"));
+        $("#divdataTables_info").append($(".dataTables_info"));
+        $("#divdataTables_info").append($(".dataTables_paginate"));
+
+        $("#chkHeader").click(function () {
+            //$("input[name='nmUser']:enabled").attr("checked", this.checked);
+            $('.chkclass:enabled').prop('checked', this.checked);
+        });
+        $('#myDataTable tbody').on('click', ".chkclass", function () {
+            if ($("input[name='nmUser']").length == $("input[name='nmUser']:checked").length) {
+                $("#chkHeader").attr("checked", "checked");
+            }
+            else {
+                $("#chkHeader").removeAttr("checked");
+            }
+        });
+
+        function filterData() {
+            var _DivisionCodes = $("#lstDivisionCodes option:selected").val();
+            var _StateCodes = $("#lstStateCodes option:selected").val();
+            var _DealerCodes = $("#lstDealerCodes option:selected").val();
+
+            var _DisplayName = $("#txtDisplayName").val();
+            var _designationCode = $("#ddlDesignation option:selected").val();
+            var _activeStatus = $("#ddlActiveStatus option:selected").val();
+            var _EmailAddress = $("#txtEmailAddress").val();
+            var _User_Id=$("#txtUser_Id").val();
+
+            mytable.fnMultiFilter({
+                "Division": _DivisionCodes, "StateCode": _StateCodes, "DealerCode": _DealerCodes,
+                "DisplayName": _DisplayName, "DesignationCode": _designationCode, "IsActive": _activeStatus, "EmailAddress": _EmailAddress,"User_Id":_User_Id
+            });
+        }
+
+        $('#btnSearch').click(function () {
+            filterData();
+        });
+
+        $('#btnClear').click(function () {
+            clearDDL("lstStateCodes");
+            clearDDL("lstDealerCodes");
+            fillAllStatesInStateDDL();
+            $('#pnlSearch').find('input:text').val('');
+            $("#pnlSearch select").each(function () {
+                $(this).val('');
+            });
+
+            $('#myDataTable tbody tr').remove();
+            $('.dataTables_paginate,.dataTables_info').hide();
+            filterData();
+
+        });
+        $('#myDataTable').on('click', ".openPopUp_AddEditUser", function (e) {
+            isSessionAlive();
+            e.preventDefault();
+            $("<div></div>")
+                .addClass("dialog")
+                .attr("id", $(this).attr("data-dialog-id"))
+                .appendTo("body")
+                .dialog({
+                    title: $(this).attr("data-dialog-title"),
+                    close: function () { $(this).remove() },
+                    modal: true,
+                    minWidth: 800,
+                    minHeight: 400
+                })
+            .load(this.href);
+        });
+
+        $('#myDataTable tbody').on('click', ".changeActiveStatus", function () {
+            var _url = $(this).attr("href");
+            $.confirm({
+                "title": "Change User Status",
+                "message": "Do you want to change the User Status?",
+                "buttons": {
+                    'Yes':
+                        {
+                            'class': 'blue',
+                            'action': function () {
+                                window.location = _url;
+                            }
+                        },
+                    'No':
+                        {
+                            'class': 'gray',
+                            'action': function () { return false; }
+                        }
+                }
+            });
+            return false;
+        });
+
+    });
+
+
+
+</script>
+@if (TempData["msgSucc"] != null)
+{
+    <script type="text/javascript">
+        showToastMsg('@TempData["msgSucc"]', 'success', null);
+    </script>
+}
+@if (TempData["alertmsg"] != null)
+{
+    <script type="text/javascript">
+        showToastMsg('@TempData["alertmsg"]', 'error', null);
+    </script>
+}
+
+<script type="text/javascript">
+    $('#pnlSearch').keypress(function (e) {
+        if (e.which == 13) {
+            $('#btnSearch').click();
+            return false;    //<---- Add this line
+        }
+    });
+
+    $("#btnAddUser").click(function () {
+        isSessionAlive();
+        $("<div></div>")
+         .addClass("dialog")
+         .attr("id", "popUpAddUser")
+         .appendTo("body")
+         .dialog({
+             title: $(this).attr("data-dialog-title"),
+             close: function () { $(this).remove() },
+             modal: true,
+             minWidth: 800,
+             minHeight: 400
+         })
+        .load('@Url.Action("AddEditUserMaster")');
+        //$("#"+$(this).attr('data-dialog-id')+".ui-dialog-title").text('My New Title');
+    });
+
+
+
+    @*$("#btnUploadUser").click(function () {
+        isSessionAlive();
+        $("<div></div>")
+         .addClass("dialog")
+         .attr("id", "popUpbtnUploadUser")
+         .appendTo("body")
+         .dialog({
+             title:"Import User Data",
+             close: function () { $(this).remove() },
+             modal: true,
+             minWidth: 800,
+             minHeight: 400
+         })
+        .load('@Url.Action("UploadNewUser")');
+        //$("#"+$(this).attr('data-dialog-id')+".ui-dialog-title").text('My New Title');
+    });*@
+
+
+
+
+    $("#btnActivate").click(function () {
+        isSessionAlive();
+
+        var tableRows = $("#myDataTable").find('input[type="checkbox"][class="chkclass"]').length;;
+        if (tableRows <= 0) {
+            showToastMsg('No Data Available To Active user', "warning", null);
+            return false;
+        }
+
+        var Id;
+        var checked = $("#myDataTable").find('input[type="checkbox"][class="chkclass"]:checked').length;
+        if (checked <= 0) {
+            showToastMsg('Please select at least one user', "warning", null);
+            return false;
+        }
+
+        UsersChangeStatus(1);
+    });
+
+    $("#btnInActivate").click(function () {
+        isSessionAlive();
+
+        var tableRows = $("#myDataTable").find('input[type="checkbox"][class="chkclass"]').length;;
+        if (tableRows <= 0) {
+            showToastMsg('No Data Available To InActive user', "warning", null);
+            return false;
+        }
+
+        var Id;
+        var checked = $("#myDataTable").find('input[type="checkbox"][class="chkclass"]:checked').length;
+        if (checked <= 0) {
+            showToastMsg('Please select at least one user', "warning", null);
+            return false;
+        }
+
+        UsersChangeStatus(0);
+    });
+
+    function UsersChangeStatus(msg) {
+        var strmsg="Active";
+        if(msg==0)
+        {
+            strmsg="InActive";
+        }
+
+        var Ids;
+
+        $.confirm({
+            "title": 'Confirmation',
+            "message": 'Are you sure you want to '+strmsg+' User(s)?',
+            "buttons": {
+                'Yes':
+                    {
+                        'class': 'blue',
+                        'action': function () {
+                            $("#myDataTable").find('input[type="checkbox"]:checked').each(function () {
+                                if (this.checked) {
+                                    var chvalue = $(this).attr("value");
+                                    Ids = Ids + ',' + $(this).attr("value");
+                                }
+                            });
+
+                            var url = '@Url.Action("ChangeUsersStatus", "UserMaster")';
+                            var data = { UserIds: Ids ,Status:msg}
+
+                            $("#confirmBox1").hide();
+                            $("#confirmOverlay1").hide();
+                            $('#dvLoading').show();
+
+                            setTimeout(function () {
+                                UpdateUsersStatus(url, data);
+                            }, 500);
+
+                            return true;
+                        }
+
+                    },
+                'No':
+                 {
+                     'class': 'gray',
+                     'action': function () { return false; }	// Nothing to do in this case. You can as well omit the action property.
+                 }
+            }
+        });
+    }
+
+    function UpdateUsersStatus(url, data) {
+
+        $.ajax({
+            url: url,
+            data: data,
+            dataType: "Json",
+            type: "POST",
+            async: false,
+            error: function (x, y, z) {
+
+                handleAjaxRequestSessionTimeout(x, y, z);
+            },
+            success: function (data) {
+                window.location.href = '@Url.Content("~/UserMaster/ManageUserMaster")';
+            }
+        });
+    }
+
+
+
+</script>
+
+<script type="text/javascript">
+
+    $("#lstDivisionCodes").change(function ()
+    {
+        clearDDL("lstStateCodes");
+        //clearDDL("ddlTM");
+        clearDDL("lstDealerCodes");
+
+        var _divisionCode = $("#lstDivisionCodes option:selected").val();
+
+        if (_divisionCode != "") {
+            $.ajax({
+                type: 'GET',
+                url: '@Url.Action("GetStatesByDivision", "State")',
+                dataType: 'json',
+                data: { divisionCode: _divisionCode },
+                success: function (StateList) {
+                    $.each(StateList, function (i, item) {
+                        $("#lstStateCodes").append('<option value="' + item.Value + '">' +
+                             item.Text + '</option>');
+                    });
+
+                },
+                error: function (x, y, z) {
+                    handleAjaxRequestSessionTimeout(x, y, z);
+                }
+            });
+        }
+        else
+        {
+            fillAllStatesInStateDDL();
+        }
+    });
+
+    $("#lstStateCodes").change(function ()
+    {
+        //clearDDL("ddlTM");
+        var _stateCode = $("#lstStateCodes option:selected").val();
+        //var _tmCode = $("#ddlTM option:selected").val();
+
+
+        if (_stateCode != "")
+        {
+            @*$.ajax({
+
+                type: 'GET',
+                url: '@Url.Action("GetTMsByState", "Home")',
+                dataType: 'json',
+                data: { stateCode: _stateCode },
+                success: function (TMList) {
+                    $.each(TMList, function (i, item) {
+                        $("#ddlTM").append('<option value="' + item.Value + '">' +
+                             item.Text + '</option>');
+                    });
+
+                },
+                error: function (x, y, z) {
+                    handleAjaxRequestSessionTimeout(x, y, z);
+                }
+            });
+
+            if (_tmCode == "")
+            {*@
+                fillDealerDDLfilteredByState();
+            //}
+            //else {
+            //    fillDealerDDLfilteredByTM();
+            //}
+        }
+        else
+        {
+            clearDDL("lstDealerCodes");
+        }
+    });
+
+
+    function fillDealerDDLfilteredByState() {
+        clearDDL("lstDealerCodes");
+        var _stateCode = $("#lstStateCodes option:selected").val();
+        $.ajax({
+            type: 'GET',
+            url: '@Url.Action("GetDealersByState", "UserMaster")',
+            data: { stateId: _stateCode },
+            dataType: 'json',
+            success: function (DealerList) {
+                $.each(DealerList, function (i, item) {
+                    $("#lstDealerCodes").append('<option value="' + item.Value + '">' +
+                         item.Text + '</option>');
+                });
+            },
+            error: function (x, y, z) {
+                handleAjaxRequestSessionTimeout(x, y, z);
+            }
+        });
+    }
+
+    @*function fillDealerDDLfilteredByTM()
+    {
+        clearDDL("lstDealerCodes");
+        var _tmCode = $("#ddlTM option:selected").val();
+        if (_tmCode != "") {
+            $.ajax({
+                type: 'GET',
+                url: '@Url.Action("GetDealersByTM", "Home")',
+                dataType: 'json',
+                data: { tmCode: _tmCode },
+                success: function (DealerList) {
+                    $.each(DealerList, function (i, item) {
+                        $("#lstDealerCodes").append('<option value="' + item.Value + '">' +
+                             item.Text + '</option>');
+                    });
+                },
+                error: function (x, y, z)
+                {
+                    handleAjaxRequestSessionTimeout(x, y, z);
+                }
+            });
+        }
+        else
+        {
+            var _stateCode = $("#lstStateCodes option:selected").val();
+            if (_stateCode != "")
+            {
+                fillDealerDDLfilteredByState();
+            }
+        }
+    }*@
+    function clearDDL(ctrlId) {
+        $("#" + ctrlId).empty();
+        $("#" + ctrlId).append("<option value=''>- All -</option>");
+    }
+
+    function fillAllStatesInStateDDL()
+    {
+        clearDDL("lstStateCodes");
+        $.ajax({
+            type: 'GET',
+            url: '@Url.Action("GetAllStatesJson", "State")',
+            dataType: 'json',
+            success: function (StateList) {
+                $.each(StateList, function (i, item) {
+                    $("#lstStateCodes").append('<option value="' + item.Value + '">' +
+                         item.Text + '</option>');
+                });
+            },
+            error: function (x, y, z) {
+                handleAjaxRequestSessionTimeout(x, y, z);
+            }
+        });
+    }
+    //$("#ddlTM").change(function () {
+    //    fillDealerDDLfilteredByTM();
+    //});
+    $("#lstDealerCodes").change(function () {
+    });
+</script>
