@@ -1,0 +1,124 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+using System.Web.Security;
+
+using Microsoft.Owin;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.Cookies;
+using Okta.AspNet;
+using Owin;
+using DOAE.MODEL;
+using DOAE.COMMON;
+namespace DOAE
+{
+    public class CustomeAuthorize : AuthorizeAttribute
+    {
+        private string _FeatureId = string.Empty;
+        private bool IsValidRequest = false;
+        private bool IsAutheticated = false;
+        public string FeatureId { get; set; }
+        public string FeatureAction { get; set; }
+        public bool IsSSOLogin { get; set; }
+        public string AddtionalFeatureId { get; set; }
+        public bool IsSessionTimeOut { get; set; }  
+
+        protected override bool AuthorizeCore(HttpContextBase httpContext)
+        {
+            if (httpContext.Request.IsAuthenticated)
+            {
+                IsAutheticated = true;
+                if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+                {
+                    User objUser = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+                    if (objUser != null && objUser.UserId != null)
+                    {
+                        IsSessionTimeOut = false;
+                        List<RoleFeatures> _lstRoleFeatures = objUser.RoleFeatures;
+                        if (_lstRoleFeatures != null && _lstRoleFeatures.Count > 0)
+                        { 
+
+                            if( !string.IsNullOrEmpty(this.FeatureId))
+                            {
+                                RoleFeatures _FeatureRoleRights = _lstRoleFeatures.Find(delegate (RoleFeatures obj) { return obj.FeatureId == this.FeatureId; });
+                                if (_FeatureRoleRights != null)
+                                    IsValidRequest = true;
+                                else
+                                {
+                                    IsValidRequest = false;
+                                }
+                            }
+                            else
+                            {
+                                IsValidRequest = true;
+                            }
+                        }
+                        else
+                        {
+                            IsValidRequest = false;
+                        }
+                    }
+                    else
+                    {
+                        IsSessionTimeOut = true;
+                    }
+                }
+                else
+                {
+                    IsSessionTimeOut = true;
+                }
+            }
+            else
+            {
+                IsAutheticated = false;
+                IsValidRequest = true;
+                IsSessionTimeOut = false;
+            }
+            return IsValidRequest;
+        } 
+        public override void OnAuthorization(AuthorizationContext filterContext)
+        {
+            base.OnAuthorization(filterContext);
+        }
+        protected override void HandleUnauthorizedRequest(AuthorizationContext filterContext)
+        {
+            if (!IsAutheticated)
+            {
+                filterContext.Result = new RedirectToRouteResult(new
+                System.Web.Routing.RouteValueDictionary(new { controller = "Login", action = "Login" }));
+            }
+            else if (IsSessionTimeOut)
+            {
+                filterContext.Result = new RedirectToRouteResult(new
+                System.Web.Routing.RouteValueDictionary(new { controller = "Session", action = "SessionTimeout" }));
+            }
+            else if (IsValidRequest)
+            {
+                base.HandleUnauthorizedRequest(filterContext);
+            }
+            else
+            {
+                if (MvcApplication.OktaEnable)
+                {
+                    filterContext.HttpContext.GetOwinContext().Authentication.SignOut(
+                    CookieAuthenticationDefaults.AuthenticationType, OktaDefaults.MvcAuthenticationType);
+                }
+                else
+                {
+                    FormsAuthentication.SignOut();
+                }
+                if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+                {
+                    JDDOASession.RemoveSessionItem(SessionKeys.CurrentUser);
+                }
+                JDDOASession.ClearSession();
+                JDDOASession.AbandonSession();
+                filterContext.Result = new RedirectToRouteResult(new
+                System.Web.Routing.RouteValueDictionary(new { controller = "Error", action = "UnathorizedAccess" }));
+            }
+        }
+    }
+}
