@@ -1,0 +1,725 @@
+@model DOAE.MODEL.UserMaster
+@using DOAE.MODEL
+@using System.Web.Optimization;
+@{
+    SelectList selListDesignations = ViewBag.selListDesignations;
+    SelectList selListRoles = ViewBag.selListRoles;
+    bool isAddNew = (bool)ViewBag.isAddNew;
+    List<SelectListItem> lstTOT = new List<SelectListItem>();
+    SelectListItem item = new SelectListItem();
+    SelectListItem item1 = new SelectListItem();
+    item.Text = "0";
+    item.Value = "0";
+    lstTOT.Add(item);
+    item1.Text = "1";
+    item1.Value = "1";
+    lstTOT.Add(item1);
+
+    List<GradesMaster> lstLevels = ViewBag.lstLevels;
+    List<Lookup> lstPlatform = (List<Lookup>)ViewBag.lstPlatform;
+    SelectList lstDepartments = ViewBag.lstDepartments;
+    SelectList lstCostCenters = ViewBag.lstParentCostCenters;
+
+    List<ApplicationMaster> lstApplications = ViewBag.lstApplications;
+    List<SystemRolesMaster> lstRole = ViewBag.lstRole;
+    List<UserMaster> lstAssignedRoles = ViewBag.lstAssignedRoles;
+
+    int VendorCode = VendorMaster_Constant.VENDORINDESIGNATION;
+}
+
+@*@Scripts.Render("~/bundles/jqueryval")*@
+<style type="text/css">
+.scrollbar{max-height:400px;}
+.mCSB_inside > .mCSB_container{margin-right:20px !important}
+.mCSB_scrollTools .mCSB_dragger:active .mCSB_dragger_bar,.mCSB_scrollTools .mCSB_dragger.mCSB_dragger_onDrag .mCSB_dragger_bar{background:#1d8024 !important}
+.mCSB_scrollTools .mCSB_dragger .mCSB_dragger_bar{background:#1d8024!important}
+.mCSB_scrollTools .mCSB_dragger:hover .mCSB_dragger_bar{background:#1d8024!important}
+.mCSB_scrollTools .mCSB_dragger .mCSB_dragger_bar{width:6px;}
+.ui-datepicker{z-index:16 !important}
+</style>
+<div class="innerContent secondtabledata edituserpopup">
+    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="innerContentBox mt10">
+                <ul id="myTab" class="nav nav-tabs customTabs">
+                    <li class="active"><a data-toggle="pill" href="#UserInfo">User Information</a></li>
+                    <li><a data-toggle="pill" href="#ApplicationRole">Application & Role Mapping</a></li>
+                </ul>
+
+                @using (Html.BeginForm("AddEditUserMaster", "UserMaster", FormMethod.Post, new { @id = "frmAddEditUser" }))
+                {
+                    @Html.HiddenFor(m => m.UserId)
+                    @Html.Hidden("hdSelectedPlatforms")
+                    @Html.Hidden("hdSelectedLevels")
+                    @Html.Hidden("hdSelectedRoles")
+                    <div class="tab-content">
+                        <div id="UserInfo" class="tab-pane fade in active">
+                            <div class="scrollbar mCS-dark-3">
+                                <div class="row">
+                                    <div class="row">
+                                        <div class="popupheading">
+                                            <h3>User Information</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Name <span class="redStar"> *</span></label>
+                                            @*@if (Model.UserId != null && Model.UserId != null)
+                                                {
+                                                    @Html.TextBoxFor(x => Model.DisplayName, new { @class = "form-control input-sm borderRadiusNone", @id = "txtDisplayName", @readonly = "readonly" })
+                                                }
+                                                else
+                                                {*@
+                                            @Html.TextBoxFor(x => Model.DisplayName, new { @class = "form-control input-sm borderRadiusNone", @maxLength = "80" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.DisplayName)
+                                            </span>
+                                            @*}*@
+
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Contact Number</label>
+                                            @Html.TextBoxFor(x => Model.ContactNumber, new { @class = "form-control input-sm borderRadiusNone numbersonly", @id = "txtContactNumber", @maxLength = "15", @minLength = "10" })
+                                            <span class="text-danger">
+                                                <div id="divContactNo" class="hide" style="text-align:left;">Contact no. should be in between 10 - 15 digits</div>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Email Id</label>
+                                            @Html.TextBoxFor(x => Model.EmailAddress, new { @class = "form-control input-sm borderRadiusNone", @id = "txtEmailAddress", @maxLength = "64" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.EmailAddress)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">User Id <span class="redStar"> *</span></label>
+                                            @if (Model.UserId != null && Model.UserId != null)
+                                            {
+                                                @Html.TextBoxFor(x => Model.User_Id, new { @class = "form-control input-sm borderRadiusNone", @readonly = "readonly" })
+                                            }
+                                            else
+                                            {
+                                                @Html.TextBoxFor(x => Model.User_Id, new { @class = "form-control input-sm borderRadiusNone", @maxLength = "32" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.User_Id)
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">IMS <span class="redStar"> *</span></label>
+                                            @Html.DropDownListFor(x => Model.DesignationCode, new SelectList(selListDesignations, "Value", "Text", Model.DesignationCode), "-- Select --", new { @class = "form-control input-sm borderRadiusNone" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.DesignationCode)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div id="divVendor" class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Vendor <span class="redStar"> *</span></label>
+                                            @Html.TextBoxFor(x => x.VendorName, new { @class = "form-control borderRadiusNone", @maxLength = "23" })
+                                            @Html.HiddenFor(x => Model.f_vendor_cd)
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Manager</label>
+                                            @Html.TextBoxFor(x => x.ManagerName, new { @class = "form-control borderRadiusNone", @maxLength = "23" })
+                                            @Html.HiddenFor(x => Model.f_manager_cd)
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Bank Account Number</label> @*@Html.LabelFor(x => x.m_acc_no)*@
+                                            @Html.TextBoxFor(x => x.m_acc_no, new { @class = "form-control borderRadiusNone", @maxLength = "23" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.m_acc_no)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Bank IFSC Code</label> @*@Html.LabelFor(x => x.m_ifsc_no)*@
+                                            @Html.TextBoxFor(x => x.m_ifsc_no, new { @class = "form-control  borderRadiusNone", @maxLength = "23" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.m_ifsc_no)
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Emp. PAN Number</label>@*@Html.LabelFor(x => x.m_pan_no)*@
+                                            @Html.TextBoxFor(x => x.m_pan_no, new { @class = "form-control  borderRadiusNone", @maxLength = "23" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.m_pan_no)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Dealer Branch Code</label>@*@Html.LabelFor(x => x.f_dlr_branch_cd)*@
+                                            @Html.TextBoxFor(x => x.f_dlr_branch_cd, new { @class = "form-control  borderRadiusNone" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.f_dlr_branch_cd)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Weightage</label>@*@Html.LabelFor(x => x.m_weightage)*@
+                                            @Html.TextBoxFor(x => x.m_weightage, new { @class = "form-control  borderRadiusNone" })
+                                            @*<span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.m_weightage)
+                                                </span>*@
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Emp. Begin Date</label>@*@Html.LabelFor(x => x.m_empbg_dt)*@
+                                        <div class="calIcon">
+                                            @Html.TextBoxFor(x => Model.m_empbg_dt, Html.DateDisplayFormat(), new { @class = "form-control input-sm styledate" })
+                                        </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Emp. End Date</label>@*@Html.LabelFor(x => x.m_emptm_dt)*@
+                                        <div class="calIcon">
+                                            @Html.TextBoxFor(x => Model.m_emptm_dt, Html.DateDisplayFormat(), new { @class = "form-control input-sm styledate" })
+                                        </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">UKey </label>@*@Html.LabelFor(x => x.ukey)*@
+                                            @Html.TextBoxFor(x => x.ukey, new { @class = "form-control  borderRadiusNone", @maxLength = "31" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.ukey)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Total</label>@*@Html.LabelFor(x => x.m_tot)*@
+                                            @Html.DropDownListFor(x => x.m_tot, lstTOT, new { @class = "form-control  borderRadiusNone" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.m_tot)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (isAddNew)
+                                {
+                                    <script>
+                                        $("span.ui-dialog-title").text('Add User');
+                                    </script>
+                                    <div class="row">
+                                        <div id="divBaseLocation" class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label for="inputsm">Base Location<span class="redStar"> *</span></label>
+                                                @Html.TextBoxFor(x => Model.BaseLocation, new { @class = "form-control input-sm borderRadiusNone", @maxLength = "200" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.BaseLocation)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label for="inputsm">Password <span class="redStar"> *</span></label>
+                                                @Html.TextBoxFor(x => Model.NewPassword, new { @type = "password", @class = "form-control input-sm borderRadiusNone", @maxLength = "64" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.NewPassword)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label for="inputsm">Confirm Password<span class="redStar"> *</span></label>
+                                                @Html.TextBoxFor(x => Model.ConfirmNewPassword, new { @type = "password", @class = "form-control input-sm borderRadiusNone", @maxLength = "64" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.ConfirmNewPassword)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label for="inputsm">Display Designation<span class="redStar"> *</span></label>
+                                                @Html.TextBoxFor(x => Model.DisplayDesignation, new { @class = "form-control input-sm borderRadiusNone", @maxLength = "200" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.DisplayDesignation)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="row">
+                                        <div id="divBaseLocation" class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label for="inputsm">Base Location<span class="redStar"> *</span></label>
+                                                @Html.TextBoxFor(x => Model.BaseLocation, new { @class = "form-control input-sm borderRadiusNone", @maxLength = "200" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.BaseLocation)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label for="inputsm">Display Designation<span class="redStar"> *</span></label>
+                                                @Html.TextBoxFor(x => Model.DisplayDesignation, new { @class = "form-control input-sm borderRadiusNone", @maxLength = "200" })
+                                                <span class="text-danger">
+                                                    @Html.ValidationMessageFor(x => Model.DisplayDesignation)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div id="ApplicationRole" class="tab-pane fade">
+                            <div class="scrollbar">
+                                <div class="row">
+                                    <div class="row">
+                                        <div class="popupheading">
+                                            <h3>Application &amp; Role Mapping</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Department</label>
+                                            @Html.DropDownListFor(x => Model.f_department_cd, lstDepartments, "Select", new { @class = "form-control input-sm borderRadiusNone", @maxLength = "200" })
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Role<span class="redStar"> *</span></label>
+                                            @Html.DropDownListFor(x => Model.Role_Code, new SelectList(selListRoles, "Value", "Text", Model.Role_Code), "-- Select --", new { @class = "form-control input-sm borderRadiusNone", @id = "ddlRole" })
+                                            <span class="text-danger">
+                                                @Html.ValidationMessageFor(x => Model.Role_Code)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Platform</label>
+                                            <div>
+                                                @foreach (Lookup singlePlatform in lstPlatform)
+                                                {
+                                                    if (!string.IsNullOrEmpty(Model.Platforms) && Model.Platforms.ToUpper().Contains(singlePlatform.LookUpValue.ToUpper()))
+                                                    {
+                                                        <input type="checkbox" id="@singlePlatform.LookUpValue" checked="checked" class="clsPlatforms" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox" id="@singlePlatform.LookUpValue" class="clsPlatforms" />
+                                                    }
+
+                                                    <label for="@singlePlatform.LookUpValue" class="mr10">@singlePlatform.LookupText</label>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                                        <div class="form-group">
+                                            <label for="inputsm">Level</label>
+                                            <div>
+                                                @foreach (GradesMaster singleLevel in lstLevels)
+                                                {
+                                                    if (!string.IsNullOrEmpty(Model.Levels) && Model.Levels.Contains(singleLevel.m_sys_cd.ToString()))
+                                                    {
+                                                        <input type="checkbox" id="@singleLevel.m_sys_cd" checked="checked" class="clsLevels" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox" id="@singleLevel.m_sys_cd" class="clsLevels" />
+                                                    }
+
+                                                    <label class="mr10" for="@singleLevel.m_sys_cd">@singleLevel.m_GradeName</label>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    @foreach (ApplicationMaster singleApplication in lstApplications)
+                                    {
+                                        var obj = lstAssignedRoles.Where(x => x.f_application_cd == singleApplication.m_sys_cd).FirstOrDefault();
+                                        int? selValue = obj == null ? 0 : obj.f_systemrole_cd;
+                                        SelectList lstSystemRoles = new SelectList(items: lstRole, selectedValue: selValue, dataValueField: SystemRolesMaster_Constant.M_SYS_CD, dataTextField: SystemRolesMaster_Constant.M_SYSTEMROLE);
+                                        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                            <div class="form-group">
+                                                <label>@singleApplication.m_ApplicationName</label>
+                                                @Html.DropDownListFor(x => Model.f_systemrole_cd, lstSystemRoles, "None", new { @id = singleApplication.m_sys_cd, @class = "form-control input-sm borderRadiusNone clsSystemRoles" })
+                                                <div class="clearfix"></div>
+                                            </div>
+                                        </div>
+
+                                    }
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+                                        <div class="form-group">
+                                            <label>Cost Center </label>
+                                            @Html.DropDownListFor(x => Model.m_CostCenter, lstCostCenters, "Select", new { @class = "form-control input-sm" })
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                        <div>&nbsp;</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="pull-right">
+                                    <button type="button" class="btn btnLogin" id="btnSaveUser">Save User</button>
+                                    <button type="button" class="btn btnCancel" id="btnCancel"><i class="fa fa-times"></i> Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<script>
+    $.validator.unobtrusive.parse(document);
+    //$("#btnSaveUser").click(function () {
+    //    $("#frmAddEditUser").submit();
+    //});
+    $(".styledate").datepicker({
+        changeMonth: true,
+        changeYear: true,
+        dateFormat: 'dd-M-yy',
+        showOn: "both",
+        buttonText: "<i class='fa fa-calendar cal-btn'></i>",
+        yearRange: "-20:+3"
+    }).attr("readonly", "readonly");
+
+
+</script>
+<script type="text/javascript">
+    $("#btnCancel").click(function () {
+        $(".ui-dialog-titlebar-close").click()
+
+    });
+    $(".numbersonly").numeric();
+    $('#txtContactNumber').change(function () {
+        var cont = $("#txtContactNumber").val();
+        var len = cont.length;
+        if (len != 0) {
+            if (len < 10) {
+                $("#divContactNo").removeClass('hide');
+            }
+            else {
+                $("#divContactNo").addClass('hide');
+            }
+        }
+        else {
+            $("#divContactNo").addClass('hide');
+        }
+    });
+    $("#btnSaveUser").click(function (e) {
+        //debugger;
+        isSessionAlive();
+        e.preventDefault();
+        var UserId = $("#UserId").val();
+
+        var User_Id = $("#User_Id").val();
+        if (User_Id == '' || User_Id == null || User_Id == undefined) {
+            showToastMsg('Please enter User Id', "warning", null);
+            return false;
+        }
+
+        var txtDisplayName = $("#DisplayName").val();
+        if (txtDisplayName == '' || txtDisplayName == null || txtDisplayName == undefined) {
+            showToastMsg('Please enter User Name', "warning", null);
+            return false;
+        }
+
+        var DesignationCode = $("#DesignationCode").val();
+        if (DesignationCode == '' || DesignationCode == null || DesignationCode == undefined) {
+            showToastMsg('Please select Designation', "warning", null);
+            return false;
+        }
+        else {
+            if (DesignationCode == '@VendorCode') {
+                var txtVendorName = $("#VendorName").val();
+                var txtVendorCode = $("#f_vendor_cd").val();
+                if (txtVendorName == '' || txtVendorCode == '' || txtVendorCode == null || txtVendorCode == undefined) {
+                    showToastMsg('Please select Vendor Name', "warning", null);
+                    return false;
+                }
+            }
+        }
+
+        //var ManagerName = $("#ManagerName").val();
+        //if (ManagerName == '' || ManagerName == null || ManagerName == undefined) {
+        //    showToastMsg('Please select Manager', "warning", null);
+        //    return false;
+        //}
+        if ($("#NewPassword").is('visible')) {
+            //debugger;
+            var NewPassword = $("#NewPassword").val();
+            if (NewPassword == '' || NewPassword == null || NewPassword == undefined) {
+                showToastMsg('Please enter Password', "warning", null);
+                return false;
+            }
+
+            var ConfirmNewPassword = $("#ConfirmNewPassword").val();
+            if (ConfirmNewPassword == '' || ConfirmNewPassword == null || ConfirmNewPassword == undefined) {
+                showToastMsg('Please Confirm New Password', "warning", null);
+                return false;
+            }
+        }
+
+        var DisplayDesignation = $("#DisplayDesignation").val();
+        if (DisplayDesignation == '' || DisplayDesignation == null || DisplayDesignation == undefined) {
+            showToastMsg('Please enter Display Designation', "warning", null);
+            return false;
+        }
+
+        //var f_department_cd = $("#f_department_cd").val();
+        //if (f_department_cd == '' || f_department_cd == null || f_department_cd == undefined) {
+        //    showToastMsg('Please select Department', "warning", null);
+        //    return false;
+        //}
+
+        var ddlRole = $("#ddlRole").val();
+        if (ddlRole == '' || ddlRole == null || ddlRole == undefined) {
+            showToastMsg('Please select Role', "warning", null);
+            return false;
+        }
+
+        var isval = $('#frmAddEditUser').valid();
+        if (isval == false) {
+            var cont = $("#txtContactNumber").val();
+            var len = cont.length;
+            if (len != 0) {
+                if (len < 10) {
+                    $("#divContactNo").removeClass('hide');
+                }
+                else {
+                    $("#divContactNo").addClass('hide');
+                }
+            }
+            return false;
+        }
+        else {
+            $("#divContactNo").addClass('hide');
+        }
+
+        var selPlatforms = '';
+        $(".clsPlatforms:checkbox:checked").each(function (e) {
+            selPlatforms += $(this).attr('id') + ",";
+        });
+        $("#hdSelectedPlatforms").val(selPlatforms);
+
+        var selLevels = '';
+        $(".clsLevels:checkbox:checked").each(function (e) {
+            selLevels += $(this).attr('id') + ",";
+        });
+        $("#hdSelectedLevels").val(selLevels);
+
+        var appRole = '';
+        $(".clsSystemRoles").each(function (e) {
+            var selRole = $(this).val();
+            var applicationId = $(this).attr('id');
+
+            appRole += applicationId + '_' + selRole + ',';
+        });
+        $("#hdSelectedRoles").val(appRole);
+
+
+        var url = '@Url.Action("CheckUser_IdCodeExists", "UserMaster")';
+        $.post
+               (url,
+               {
+                   UserId: UserId,
+                   User_Id: User_Id,
+               },
+               function (data) {
+
+                   if (data == "0") {
+                       $("#frmAddEditUser").submit();
+                   }
+                   else if (data == "1") {
+                       showToastMsg('User Id already exists.', "warning", null);
+                       return false;
+                   }
+                   else {
+                       alert('Something went wrong.');
+                       return false;
+                   }
+               });
+    });
+    $("#DesignationCode").change(function () {
+
+        var desig = $(this).val();
+
+        if (desig == 4 || desig == 64)//Demonstrator or Co-generator
+        {
+            $('#divBaseLocation').removeClass('hide');
+        }
+        else {
+            $('#divBaseLocation').addClass('hide');
+        }
+
+        if (desig == '@VendorCode') {
+            $('#divVendor').removeClass('hide');
+        }
+        else {
+            $('#divVendor').addClass('hide');
+        }
+    });
+</script>
+<script>
+    $(document).ready(function () {
+
+        var desig = $('#DesignationCode').val();
+
+        if (desig == 4 || desig == 64)//Demonstrator or Co-generator
+        {
+            $('#divBaseLocation').removeClass('hide');
+        }
+        else {
+            $('#divBaseLocation').addClass('hide');
+        }
+
+        if (desig == '@VendorCode') {
+            $('#divVendor').removeClass('hide');
+        }
+        else {
+            $('#divVendor').addClass('hide');
+        }
+    });
+    $(document).ready(function () {
+        $(".ui-dialog").addClass("edituserpopup");
+        $(".scrollbar").mCustomScrollbar({
+            theme: "dark"
+        });
+    });
+</script>
+
+<script type="text/javascript">
+
+    $("#ManagerName").autocomplete({
+        source: function (request, response) {
+            if (request.term.length >= 3) {
+                var url = '@Url.Action("GetUsers", "UserMaster")';
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    dataType: "json",
+                    data: { personName: request.term },
+                    success: function (data) {
+                        var isFound = 0;
+                        response($.map(data, function (item) {
+                            isFound = 1;
+                            return { label: item.Login, value: item.DisplayName };
+                        }))
+                        if (isFound == 0) {
+                            showToastMsg('No User found.', "warning", null);
+                            $("#ManagerName").val('');
+                        }
+                    },
+                })
+            }
+        },
+        select: function (e, i) {
+            e.preventDefault();
+            $(this).val(i.item.value);
+
+            $("#f_manager_cd").val(i.item.label);
+        },
+        minLength: 3,
+        messages:
+        {
+            noResults: "", results: function (resultsCount) { }
+        }
+    }).
+    data("ui-autocomplete")._renderItem = function (ul, item) {
+        return $("<li></li>")
+            .data("item.autocomplete", item)
+            .append("<div>" + item.value + "</div> ")
+            .appendTo(ul);
+    };
+
+    $("#VendorName").autocomplete({
+        source: function (request, response) {
+            if (request.term.length >= 3) {
+                var url = '@Url.Action("GetVendors", "UserMaster")';
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    dataType: "json",
+                    data: { vendorName: request.term },
+                    success: function (data) {
+                        var isFound = 0;
+                        response($.map(data, function (item) {
+                            isFound = 1;
+                            return { label: item.m_VendorCode, value: item.m_VendorName };
+                        }))
+                        if (isFound == 0) {
+                            showToastMsg('No Vendor found.', "warning", null);
+                            $("#VendorName").val('');
+                            $("#f_vendor_cd").val('');
+                        }
+                    },
+                })
+            }
+        },
+        select: function (e, i) {
+            e.preventDefault();
+            $(this).val(i.item.value);
+
+            $("#f_vendor_cd").val(i.item.label);
+        },
+        minLength: 3,
+        messages:
+        {
+            noResults: "", results: function (resultsCount) { }
+        }
+    }).
+    data("ui-autocomplete")._renderItem = function (ul, item) {
+        return $("<li></li>")
+            .data("item.autocomplete", item)
+            .append("<div>" + item.value + "</div> ")
+            .appendTo(ul);
+    };
+
+</script>
