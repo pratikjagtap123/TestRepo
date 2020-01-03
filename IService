@@ -1,0 +1,22 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+namespace DOAE.CORE
+{
+    public  interface IService<T>
+    {
+        // Fetch a single row
+        T Get(T obj);
+
+        //For CRUD operation
+        int AddEditDelete(T entity);
+
+        // Returns a list
+        IEnumerable<T> GetAll(T entity);
+
+        // Used to Get a single value like int (count), long, bool, string etc (ExecuteScalar)
+        object GetScalar(T obj);
+    }
+}
