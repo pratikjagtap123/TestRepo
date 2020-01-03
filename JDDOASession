@@ -1,0 +1,97 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web;
+
+namespace DOAE.COMMON
+{
+    public static  class JDDOASession
+    {
+        /// <summary>
+        /// returns value from session without validation 
+        /// </summary>
+        /// <param name="pKey">Session object Key</param>
+        /// <returns>Object in Session</returns>
+        public static object GetDirectValue(string pKey)
+        {
+            object objReturn = null;
+            if (!String.IsNullOrEmpty(pKey))
+            {
+                try
+                {
+                    objReturn = HttpContext.Current.Session[pKey];
+                }
+                catch
+                {
+                    objReturn = null;
+                }
+            }
+            return objReturn;
+        }
+
+        /// <summary>
+        /// Check whether object with given Key exist in Session  
+        /// </summary>
+        /// <param name="pKey">Session object Key</param>
+        /// <returns>true/false</returns>
+        public static bool IsInSession(string pKey)
+        {
+            if (HttpContext.Current != null)
+            {
+                if (!String.IsNullOrEmpty(pKey) && HttpContext.Current.Session[pKey] != null)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Get session object count
+        /// </summary>
+        /// <returns>returns count of session object keys</returns>
+        public static int GetSessionKeyCount()
+        {
+            return HttpContext.Current.Session.Keys.Count;
+        }
+
+        /// <summary>
+        /// Abandon
+        /// </summary>
+        public static void AbandonSession()
+        {
+            HttpContext.Current.Session.Abandon();
+        }
+        /// <summary>
+        /// Clear
+        /// </summary>
+        public static void ClearSession()
+        {
+            HttpContext.Current.Session.Clear();
+        }
+        /// <summary>
+        /// Removes value from session, always call IsInSession(string pKey) before calling this function 
+        /// </summary>
+        /// <param name="pKey">Session object Key</param>
+        public static void RemoveSessionItem(string pKey)
+        {
+            if (!String.IsNullOrEmpty(pKey))
+            {
+                HttpContext.Current.Session.Remove(pKey);
+            }
+        }
+        /// <summary>
+        /// Add value to session
+        /// </summary>
+        /// <param name="pKey">Session object Key</param>
+        /// <param name="pValue">Session object to add</param>
+        public static void AddSessionItem(string pKey, object pValue)
+        {
+            if (!String.IsNullOrEmpty(pKey))
+            {
+                HttpContext.Current.Session.Add(pKey, pValue);
+            }
+        }
+    }
+}
