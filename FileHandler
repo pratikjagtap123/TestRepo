@@ -1,0 +1,110 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web.Mvc;
+using DOAE.COMMON;
+namespace DOAE.CORE
+{
+    public class FileHandler : IFileHandler
+    {
+        string _FileName = string.Empty;
+        string _FilePath = string.Empty;
+        string _MIMEType = string.Empty;
+        string _SuccessMessage = string.Empty;
+
+        public bool UploadFile(FileHandle handle, ref string retFullFilePath, ref string errorMessage)
+        {
+            if (!string.IsNullOrEmpty(handle.FileName))
+            {
+                string tempFileName = string.Empty;
+
+                if (handle.FileName.Contains("\\"))
+                {
+                    string arrFileName = handle.FileName.Substring(handle.FileName.LastIndexOf("\\") + 1);
+                    handle.FileName = arrFileName;
+                }                
+                if (handle.Content.Length > 0)
+                {
+                    if (handle.FileName.Length > 100)
+                    {
+                        errorMessage = "Error- File name should be less than 100 character";
+                    }
+                    else
+                    {
+                        string FileUploadPath = handle.FilePath;
+                        Stream filestream = handle.Content;
+                        if (!Directory.Exists(handle.FilePath))
+                        {
+                            Directory.CreateDirectory(handle.FilePath);
+                        }
+                        string FullFilePath = handle.FilePath + @"\" + handle.FileName;
+                        using (var fileStream = File.Create(FullFilePath, (int)handle.Content.Length))
+                        {
+                            handle.Content.Seek(0, SeekOrigin.Begin);
+                            handle.Content.CopyTo(fileStream);
+                        }
+                        retFullFilePath = FullFilePath;
+                        return true;
+                    }
+                }
+                else
+                {
+                    errorMessage = "Error- File should not be empty";
+                }
+            }
+            else
+            {
+                errorMessage = "Error- No File Name";
+            }
+            return false;
+        }
+        public byte[] ReadFileToByte(FileHandle handle)
+        {
+            string FullFilePath = handle.FilePath + @"\" + handle.FileName;
+            byte[] byteInputStream = null;
+            if (File.Exists(FullFilePath))
+            {
+                using (FileStream fileStream = System.IO.File.Open(FullFilePath, FileMode.Open))
+                {
+                    // Fill the bytes[] array with the stream data
+                    byteInputStream = new byte[fileStream.Length];
+                    fileStream.Read(byteInputStream, 0, (int)byteInputStream.Length);
+                }
+            }
+            return byteInputStream;
+        }
+
+        public FileStreamResult ReadFileStreamResult(FileHandle handle)
+        {
+            _MIMEType = "image/jpg";// GetFileMimeType(handle.FileName);
+            FileStreamResult FileStreamResult = null;
+            string FullFilePath = handle.FilePath + @"\" + handle.FileName;
+            if (File.Exists(FullFilePath))
+            {
+                using (FileStream fileStream = System.IO.File.Open(FullFilePath, FileMode.Open))
+                {
+                    FileStreamResult = new FileStreamResult(fileStream, _MIMEType);
+                }
+            }
+            return FileStreamResult;
+        }
+
+        public string ReadFileStream(FileHandle handle)
+        {
+            throw new NotImplementedException();
+        }
+        public string CopyToFile(string SourceFilePath, string DestinationFilePath)
+        {
+            throw new NotImplementedException();
+        }
+        public string GetFileMimeType(string FileName)
+        {
+            string FileExtenssion = string.Empty;
+            string FileMimeType = string.Empty;
+            return FileMimeType;
+        }
+    }
+}
