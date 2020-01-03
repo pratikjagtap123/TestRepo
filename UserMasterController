@@ -1,0 +1,1613 @@
+using DataTables.Mvc;
+using DOAE.COMMON;
+using DOAE.CORE;
+using DOAE.MODEL;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+
+namespace DOAE.Controllers
+{
+    public class UserMasterController : Controller
+    {
+        private IUserMasterService _IUserMasterService = null;
+        private IStateMasterService _IStateMasterService = null;
+        private IDealersService _IDealersService = null;
+        private IDesignationService _IDesignationService = null;
+        private IRoleAssignmentService _IRoleAssignmentService = null;
+        private ILookupService _ILookUpService = null;
+        private IGradesMasterService _IGradesMasterService = null;
+        private IDepartmentMasterService _IDepartmentMasterService = null;
+        private IApplicationMasterService _IApplicationMasterService = null;
+        private ISystemRolesMasterService _ISystemRolesMasterService = null;
+        private ICostCenterService _ICostCenterService = null;
+        private IVendorMasterService _IVendorMasterService = null;
+        private RtoDataService _RtoDataService = null;
+        private IImportColumnMappingService _IImportColumnMappingService = null;
+
+        public UserMasterController(IUserMasterService IUserMasterService, IStateMasterService IStateMasterService, IDealersService IDealersService,
+            IDesignationService IDesignationService, IRoleAssignmentService IRoleAssignmentService, ILookupService ILookupService,
+            IGradesMasterService IGradesMasterService, IDepartmentMasterService IDepartmentMasterService, IApplicationMasterService IApplicationMasterService, 
+            ISystemRolesMasterService ISystemRolesMasterService, ICostCenterService ICostCenterService, IVendorMasterService IVendorMasterService,
+            RtoDataService RtoDataService, IImportColumnMappingService IImportColumnMappingService)
+        {
+            _IUserMasterService = IUserMasterService;
+            _IStateMasterService = IStateMasterService;
+            _IDealersService = IDealersService;
+            _IDesignationService = IDesignationService;
+            _IRoleAssignmentService = IRoleAssignmentService;
+            _ILookUpService = ILookupService;
+            _IGradesMasterService = IGradesMasterService;
+            _IDepartmentMasterService = IDepartmentMasterService;
+            _IApplicationMasterService = IApplicationMasterService;
+            _ISystemRolesMasterService = ISystemRolesMasterService;
+            _ICostCenterService = ICostCenterService;
+            _IVendorMasterService = IVendorMasterService;
+            _RtoDataService = RtoDataService;
+            _IImportColumnMappingService = IImportColumnMappingService;
+        }
+
+        // GET: UserMaster
+        public ActionResult Index()
+        {
+            return View();
+        }
+
+        [CheckSessionFilter]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        [HighLightMenuFilter]
+        public ActionResult ManageUserMaster()
+        {
+            User user = new User();
+            if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+            {
+                user = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+            }
+
+            ViewBag.lstDivisions = GetAllUserDivisions(Convert.ToInt32(user.UserId));
+            //ViewBag.lstDealers = GetAllUserDealers(Convert.ToInt32(user.UserId));
+            ViewBag.StateList = GetMyStateList();
+
+            ViewBag.selListDesignations = GetDesignations();
+            ViewBag.selListRoles = GetRoleAssignments();
+            return View();
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult FillTable_User([ModelBinder(typeof(DataTablesBinder))] IDataTablesRequest dt, string Title)
+        {
+            List<ColumnNameValue> colList = new List<ColumnNameValue>();
+            ColumnNameValue columns = new ColumnNameValue();
+
+            int iPageSize;
+            string sortdir = " asc ";
+            int TotalCount = 0;
+
+            if (dt.Length <= 0)
+                iPageSize = Convert.ToInt32(ConfigurationManager.AppSettings["PageSize"]);
+            else
+                iPageSize = dt.Length;
+
+            if (dt.SortDirection.Equals(Column.OrderDirection.Ascendant))
+                sortdir = " asc ";
+            else
+                sortdir = " desc ";
+
+
+            UserMaster searchObj = new UserMaster();
+
+            if (!string.IsNullOrEmpty(dt.SortColumnName))
+                searchObj.SortExp = dt.SortColumnName + " " + sortdir;
+
+            searchObj.PageSize = iPageSize;
+
+            if (dt.PageIndex == 0)
+                searchObj.PageIndex = 1;
+            else
+                searchObj.PageIndex = dt.PageIndex;
+
+            searchObj.IsActive = 2;  // set IsActive other than 0 and 1, to get records of both i.e. active and inactive.
+
+            foreach (var col in dt.Columns)
+            {
+                columns = new ColumnNameValue();
+                if (!string.IsNullOrEmpty(col.Search.Value))
+                {
+                    columns.ColName = col.Name;
+                    columns.ColValue = col.Search.Value;
+                    colList.Add(columns);
+                    switch (col.Name)
+                    {
+                        case UserMaster_Constants.DisplayName:
+                            searchObj.DisplayName = col.Search.Value.Trim();
+                            break;
+                        case UserMaster_Constants.DesignationCode:
+                            searchObj.DesignationCode = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                        case UserMaster_Constants.IsActive:
+                            searchObj.IsActive = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                        case UserMaster_Constants.EmailAddress:
+                            searchObj.EmailAddress = Convert.ToString(col.Search.Value.Trim());
+                            break;
+                        case UserMaster_Constants.User_Id:
+                            searchObj.User_Id = Convert.ToString(col.Search.Value.Trim());
+                            break;
+
+                        case "Division":
+                            searchObj.Division = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                        case "StateCode":
+                            searchObj.StateCode = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                        case "DealerCode":
+                            searchObj.DealerCode = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                            //case "TM":
+                            //    if (!string.IsNullOrEmpty(col.Search.Value.Trim()))
+                            //    {
+                            //        searchObj.TM = Convert.ToInt32(col.Search.Value.Trim());
+                            //    }
+                            //    break;
+
+                    }
+                }
+            }
+
+            List<UserMaster> lst = _IUserMasterService.GetAll(searchObj).ToList();
+
+            if (lst != null && lst.Count > 0)
+            {
+                TotalCount = lst[0].TotalCount;
+            }
+            bool set = false;
+            if (searchObj.PageIndex > 1 && TotalCount == 0)
+                set = true;
+
+            return Json(new DataTablesResponse(dt.Draw, lst, TotalCount, TotalCount, colList, set), JsonRequestBehavior.AllowGet);
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        public ActionResult AddEditUserMaster(string userId = "", bool isAddNew = true)
+        {
+            UserMaster user = new UserMaster();
+            user.Role_Code = -1;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                user.UserId = Convert.ToInt32(userId);
+                user = _IUserMasterService.GetUserById(user);
+            }
+
+            ViewBag.selListDesignations = GetDesignations();
+            ViewBag.selListRoles = GetRoleAssignments();
+            ViewBag.isAddNew = isAddNew;
+
+            ViewBag.lstLevels = _IGradesMasterService.GetAll(new GradesMaster()).ToList();
+            ViewBag.lstPlatform = _ILookUpService.GetAll(new Lookup() { LookupType = Lookup_Constants.ACTIVITY_TYPE_CATEGORY }).ToList();
+
+            List<DepartmentMaster> lst = _IDepartmentMasterService.GetAll(new DepartmentMaster()).Where(x => x.m_Active == true).ToList();
+            ViewBag.lstDepartments = new SelectList(lst, DepartmentMaster_Constant.M_SYS_CD, DepartmentMaster_Constant.M_DEPARTMENTNAME);
+
+            ViewBag.lstApplications = _IApplicationMasterService.GetAll(new ApplicationMaster()).ToList();
+            ViewBag.lstRole = _ISystemRolesMasterService.GetAll(new SystemRolesMaster()).ToList();
+            ViewBag.lstAssignedRoles = _IUserMasterService.GetSystemRolesForUser(user).ToList();
+
+            CostCenter objCostCenter = new CostCenter() { OnlyParent = "1" };
+            List<CostCenter> parentCostCenter = _ICostCenterService.GetAllCostCenters(objCostCenter).ToList();
+            ViewBag.lstParentCostCenters = new SelectList(parentCostCenter, CostCenter_Constant.M_SYS_CD, CostCenter_Constant.M_COSTCENTERNAME);
+
+            return PartialView("_AddEditUserMaster", user);
+        }
+
+        [HttpPost]
+        [CheckSessionFilter]
+        public ActionResult AddEditUserMaster(UserMaster user, string hdSelectedPlatforms, string hdSelectedLevels, string hdSelectedRoles)
+        {
+            hdSelectedPlatforms = string.IsNullOrEmpty(hdSelectedPlatforms) ? hdSelectedPlatforms : hdSelectedPlatforms.TrimEnd(',');
+            hdSelectedLevels = string.IsNullOrEmpty(hdSelectedLevels) ? hdSelectedLevels : hdSelectedLevels.TrimEnd(',');
+            hdSelectedRoles = string.IsNullOrEmpty(hdSelectedRoles) ? hdSelectedRoles : hdSelectedRoles.TrimEnd(',');
+
+            user.Levels = hdSelectedLevels;
+            user.Platforms = hdSelectedPlatforms;
+
+            int rowsAffected = _IUserMasterService.AddEditDelete(user);
+
+            if (string.IsNullOrEmpty(user.User_Id))
+            {
+                // Get User by RACF ID
+                UserMaster objUser1 = new UserMaster()
+                {
+                    User_Id = user.User_Id
+                };
+                objUser1 = _IUserMasterService.GetUserById(objUser1);
+                user.User_Id = objUser1.User_Id;
+            }
+
+            foreach (string singleRecord in hdSelectedRoles.Split(','))
+            {
+                string[] arr = singleRecord.Split('_');
+                int applicationId = Convert.ToInt32(arr[0]);
+                int roleId = string.IsNullOrEmpty(arr[1]) ? 0 : Convert.ToInt32(arr[1]);
+
+                UserMaster objUser = new UserMaster()
+                {
+                    User_Id = user.User_Id,
+                    f_systemrole_cd = roleId,
+                    f_application_cd = applicationId
+                };
+                _IUserMasterService.SetSystemRole(objUser);
+            }
+
+            if (rowsAffected > 0)
+            {
+                TempData["msgSucc"] = "User saved successfully.";
+            }
+            return RedirectToAction("ManageUserMaster");
+        }
+
+        [CheckSessionFilter]
+        public ActionResult ChangeUserStatus(string userId, string isActive)
+        {
+            int rowsAffected = 0;
+            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(isActive))
+            {
+                rowsAffected = _IUserMasterService.ChangeStatus(new UserMaster() { UserId = Convert.ToInt32(userId), IsActive = Convert.ToInt32(isActive) });
+            }
+
+            if (rowsAffected > 0)
+            {
+                TempData["msgSucc"] = "Status changed successfully.";
+            }
+
+            return RedirectToAction("ManageUserMaster");
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult ChangeUsersStatus(string UserIds, int Status = 1)
+        {
+            int k = 0;
+
+            if (!string.IsNullOrEmpty(UserIds))
+            {
+                string[] Ids = UserIds.Split(',');
+
+                Ids = Ids.Where(i => i != "undefined").ToArray();
+                Ids = Ids.Where(i => i != "true").ToArray();
+                Ids = Ids.Where(i => i != "on").ToArray();
+
+
+                string newUserId = "";
+                foreach (string str in Ids)
+                {
+                    if (!string.IsNullOrEmpty(str))
+                    {
+                        newUserId = newUserId + str + ",";
+                    }
+                }
+                if (!string.IsNullOrEmpty(newUserId))
+                {
+                    newUserId = newUserId.TrimEnd(',');
+                }
+
+                User user = new User();
+                if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+                {
+                    user = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+                }
+
+                k = _IUserMasterService.UpdateUsersStatus(new UserMaster() { UserId = user.UserId, IsActive = Status, UserIds = newUserId });
+
+            }
+            string msg = "Active";
+            if (Status == 0)
+            {
+                msg = "InActive";
+            }
+
+
+            if (k > 0)
+            {
+                TempData["msgSucc"] = "User(s) " + msg + " successfully.";
+            }
+            else
+            {
+                TempData["alertmsg"] = "Error occured while " + msg + " User.";
+            }
+            return Json("", JsonRequestBehavior.AllowGet);
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult CheckUser_IdCodeExists(int? UserId, string User_Id)
+        {
+            int isExists = 0;
+
+            UserMaster model = new UserMaster();
+            model.UserId = UserId;
+            model.User_Id = Convert.ToString(User_Id) != null ? User_Id.Trim() : User_Id;
+
+            var stastus = _IUserMasterService.GetScalar(model);
+
+            if (stastus != null && Convert.ToString(stastus) != "")
+            {
+                isExists = Convert.ToInt32(stastus);
+            }
+            else
+            {
+                isExists = -1;
+            }
+            return Json(isExists);
+
+        }
+
+        #region Manage User Section
+        public SelectList GetAllUserDivisions(int userId)
+        {
+            List<StateMaster> lstMonthlyPlan = _IStateMasterService.GetAllUserDivisions(new StateMaster() { UserId = userId }).OrderBy(x => x.Division).ToList();
+            return new SelectList(lstMonthlyPlan, "Division", "Division");
+        }
+        //public SelectList GetAllUserDealers(int userId)
+        //{
+        //    List<Dealer> lstDealer = _IDealerService.GetUserDealers(new Dealer() { UserId = userId }).OrderBy(x => x.DealerName).ToList();
+        //    return new SelectList(lstDealer, "DealerCode", "DealerName");
+        //}
+        public SelectList GetMyStateList()
+        {
+            User objUser = null;
+
+            if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+                objUser = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+
+            List<StateMaster> lstState = _IStateMasterService.GetUserStates(new StateMaster() { UserId = objUser.UserId }).ToList();
+            return new SelectList(lstState, "StateId", "StateName");
+        }
+
+        [CheckSessionFilter]
+        public SelectList GetDesignations()
+        {
+            List<Designation> lstDesignation = _IDesignationService.GetAll(new Designation()).ToList();
+            return new SelectList(lstDesignation, "DesignationCode", "DesignationName");
+        }
+
+        [CheckSessionFilter]
+        public SelectList GetRoleAssignments()
+        {
+            List<RoleAssignment> lstRoleAssignment = _IRoleAssignmentService.GetAll(new RoleAssignment()).ToList();
+            return new SelectList(lstRoleAssignment, "Role_Code", "Role_Name");
+        }
+
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public JsonResult GetDealersByState(string stateId, bool isActiveDealer = false)
+        {
+            if (!string.IsNullOrEmpty(stateId))
+            {
+                List<Dealers> lstDealer = _IDealersService.GetDealersByState(new Dealers() { StateId = Convert.ToInt32(stateId), IsActiveDealer = isActiveDealer }).ToList();
+                var dealers = new SelectList(lstDealer, "DealerCode", "DealerName");
+                return Json(dealers, JsonRequestBehavior.AllowGet);
+            }
+            else
+            {
+                return Json("", JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        public JsonResult GetUsers(string personName)
+        {
+            UserMaster objUser = new UserMaster();
+            objUser.PageIndex = 1;
+            objUser.PageSize = 10;
+            objUser.DisplayName = personName;
+            List<UserMaster> lstUsers = _IUserMasterService.GetAll(objUser).ToList();
+
+            return Json(lstUsers, JsonRequestBehavior.AllowGet);
+        }
+
+        public JsonResult GetVendors(string vendorName)
+        {
+            VendorMaster objVendor = new VendorMaster();
+            objVendor.PageIndex = 1;
+            objVendor.PageSize = 10;
+            objVendor.m_VendorName = vendorName;
+            objVendor.IsActive = 1;
+            List<VendorMaster> lstVendors = _IVendorMasterService.GetAll(objVendor).ToList();
+
+            return Json(lstVendors, JsonRequestBehavior.AllowGet);
+        }
+        #endregion
+
+        #region Map Area Of Responsibility Section
+        [CheckSessionFilter]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        public ActionResult AreaOfResponsibility(int UserId, string flgAction = "MappedAreaOfResponsibility")
+        {
+            ViewBag.flgAction = flgAction;
+            ViewBag.UserId = UserId;
+
+            return View();
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult MappedAreaOfResponsibility(int UserId)
+        {
+            if (UserId > 0)
+            {
+                UserMaster model = new UserMaster();
+                model.UserId = UserId;
+                UserMaster user = _IUserMasterService.GetUserById(model);
+
+                return PartialView("_MappedAreaOfResponsibility", user);
+            }
+            else
+            {
+                return PartialView("_MappedAreaOfResponsibility");
+            }
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult FillTable_UserMappedAreaOfResponsibility([ModelBinder(typeof(DataTablesBinder))] IDataTablesRequest dt, string Title, int UserId)
+        {
+            List<ColumnNameValue> colList = new List<ColumnNameValue>();
+            ColumnNameValue columns = new ColumnNameValue();
+
+            int iPageSize;
+            string sortdir = " asc ";
+            int TotalCount = 0;
+
+            if (dt.Length <= 0)
+                iPageSize = Convert.ToInt32(ConfigurationManager.AppSettings["PageSize"]);
+            else
+                iPageSize = dt.Length;
+
+            if (dt.SortDirection.Equals(Column.OrderDirection.Ascendant))
+                sortdir = " asc ";
+            else
+                sortdir = " desc ";
+
+
+            UserMaster searchObj = new UserMaster();
+
+            if (!string.IsNullOrEmpty(dt.SortColumnName))
+                searchObj.SortExp = dt.SortColumnName + " " + sortdir;
+
+            searchObj.PageSize = iPageSize;
+
+            if (dt.PageIndex == 0)
+                searchObj.PageIndex = 1;
+            else
+                searchObj.PageIndex = dt.PageIndex;
+
+            searchObj.UserId = UserId;
+            foreach (var col in dt.Columns)
+            {
+                columns = new ColumnNameValue();
+                if (!string.IsNullOrEmpty(col.Search.Value))
+                {
+                    columns.ColName = col.Name;
+                    columns.ColValue = col.Search.Value;
+                    colList.Add(columns);
+                    switch (col.Name)
+                    {
+                        case "UserId":
+                            searchObj.UserId = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                    }
+                }
+            }
+
+            List<UserMaster> lst = _IUserMasterService.UserMappedAreaOfResponsibility(searchObj).ToList();
+
+            if (lst.Count > 0)
+            {
+                lst = (from p in lst
+                       select new UserMaster()
+                       {
+                           UserId = p.UserId,
+                           Name = p.Name,
+                           RoleName = p.RoleName,
+                           StateName = p.StateName,
+                           DistrictName = p.DistrictName,
+                           TehsilBlockName = p.TehsilBlockName,
+                           DealerSapCode = p.DealerSapCode,
+                           Division = p.Division,
+                           TotalCount = p.TotalCount
+                       }).ToList();
+            }
+
+            if (lst != null && lst.Count > 0)
+            {
+                TotalCount = lst[0].TotalCount;
+            }
+            bool set = false;
+            if (searchObj.PageIndex > 1 && TotalCount == 0)
+                set = true;
+
+            return Json(new DataTablesResponse(dt.Draw, lst, TotalCount, TotalCount, colList, set), JsonRequestBehavior.AllowGet);
+
+        }
+
+        [CheckSessionFilter]
+        public ActionResult DeleteMappedAreaOfResponsibility(int UserId, int ReferenceId)
+        {
+            int rowsAffected = 0;
+
+            rowsAffected = _IUserMasterService.DeleteAreaOfResponsibility(new UserMaster() { UserId = UserId, ReferenceId = ReferenceId });
+
+            if (rowsAffected > 0)
+            {
+                TempData["msgMap"] = "Area Of Responsibility deleted successfully.";
+            }
+            else
+            {
+                TempData["errMap"] = "Error occured while deleting Area Of Responsibility.";
+            }
+            return RedirectToAction("AreaOfResponsibility", new { UserId = UserId });
+        }
+
+        [CheckSessionFilter]
+        public ActionResult DeleteUserSingleAreaOfResponsibility(int UserId)
+        {
+            int rowsAffected = 0;
+
+            rowsAffected = _IUserMasterService.DeleteUserSingleAreaOfResponsibility(new UserMaster() { UserId = UserId });
+
+            if (rowsAffected > 0)
+            {
+                TempData["msgMap"] = "Area Of Responsibility deleted successfully.";
+            }
+            else
+            {
+                TempData["errMap"] = "Error occured while deleting Area Of Responsibility.";
+            }
+            return RedirectToAction("AreaOfResponsibility", new { UserId = UserId });
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult AssignAreaOfResponsibility(int UserId)
+        {
+            if (UserId > 0)
+            {
+                UserMaster model = new UserMaster();
+                model.UserId = UserId;
+                UserMaster user = _IUserMasterService.GetUserById(model);
+                ViewBag.lstDivisions = GetAllDivisions();
+                return PartialView("_AssignAreaOfResponsibility", user);
+            }
+            else
+            {
+                return PartialView("_AssignAreaOfResponsibility");
+            }
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult FillTable_GetAreaOfResponsibilityForMapping([ModelBinder(typeof(DataTablesBinder))] IDataTablesRequest dt, string Title, int UserId)
+        {
+            List<ColumnNameValue> colList = new List<ColumnNameValue>();
+            ColumnNameValue columns = new ColumnNameValue();
+
+            int iPageSize;
+            string sortdir = " asc ";
+            int TotalCount = 0;
+
+            if (dt.Length <= 0)
+                iPageSize = Convert.ToInt32(ConfigurationManager.AppSettings["PageSize"]);
+            else
+                iPageSize = dt.Length;
+
+            if (dt.SortDirection.Equals(Column.OrderDirection.Ascendant))
+                sortdir = " asc ";
+            else
+                sortdir = " desc ";
+
+
+            UserMaster searchObj = new UserMaster();
+
+            if (!string.IsNullOrEmpty(dt.SortColumnName))
+                searchObj.SortExp = dt.SortColumnName + " " + sortdir;
+
+            searchObj.PageSize = iPageSize;
+
+            if (dt.PageIndex == 0)
+                searchObj.PageIndex = 1;
+            else
+                searchObj.PageIndex = dt.PageIndex;
+
+
+            searchObj.UserId = UserId;
+            searchObj.Division = -1;
+            foreach (var col in dt.Columns)
+            {
+                columns = new ColumnNameValue();
+                if (!string.IsNullOrEmpty(col.Search.Value))
+                {
+                    columns.ColName = col.Name;
+                    columns.ColValue = col.Search.Value;
+                    colList.Add(columns);
+                    switch (col.Name)
+                    {
+                        case "UserId":
+                            searchObj.UserId = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                        case "Name":
+                            searchObj.Name = Convert.ToString(col.Search.Value.Trim());
+                            break;
+                        case "Division":
+                            searchObj.Division = Convert.ToInt32(col.Search.Value.Trim());
+                            break;
+                    }
+                }
+            }
+
+            List<UserMaster> lst = _IUserMasterService.GetAreaOfResponsibilityForMapping(searchObj).ToList();
+
+            if (lst.Count > 0)
+            {
+                lst = (from p in lst
+                       select new UserMaster()
+                       {
+                           ReferenceId = p.UserId,
+                           Name = p.Name,
+                           RoleName = p.RoleName,
+                           StateName = p.StateName,
+                           DistrictName = p.DistrictName,
+                           TehsilBlockName = p.TehsilBlockName,
+                           DealerSapCode = p.DealerSapCode,
+                           Division = p.Division,
+                           TotalCount = p.TotalCount
+                       }).ToList();
+            }
+
+            if (lst != null && lst.Count > 0)
+            {
+                TotalCount = lst[0].TotalCount;
+            }
+            bool set = false;
+            if (searchObj.PageIndex > 1 && TotalCount == 0)
+                set = true;
+
+            return Json(new DataTablesResponse(dt.Draw, lst, TotalCount, TotalCount, colList, set), JsonRequestBehavior.AllowGet);
+
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult AssignAreaOfResponsibilityToUser(string ReferenceIDs, int UserId)
+        {
+            int k = 0;
+
+            if (!string.IsNullOrEmpty(ReferenceIDs))
+            {
+                string[] Ids = ReferenceIDs.Split(',');
+
+                Ids = Ids.Where(i => i != "undefined").ToArray();
+                Ids = Ids.Where(i => i != "true").ToArray();
+                Ids = Ids.Where(i => i != "on").ToArray();
+                foreach (string str in Ids)
+                {
+                    UserMaster user = new UserMaster();
+                    user.ReferenceId = Convert.ToInt32(str);
+                    user.UserId = UserId;
+                    k = k + _IUserMasterService.UserAssignAreaOfResponsibility(user);
+                }
+            }
+
+            if (k > 0)
+            {
+                TempData["msgAssign"] = "Assign Area Of Responsibility successfully";
+            }
+            else
+            {
+                TempData["errAssign"] = "Error occured while Assign Area Of Responsibility(s)";
+            }
+            return Json("", JsonRequestBehavior.AllowGet);
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult AssignSingleAreaOfResponsibilityToUser(string ReferenceIDs, int UserId)
+        {
+            int k = 0;
+
+            if (!string.IsNullOrEmpty(ReferenceIDs))
+            {
+                string[] Ids = ReferenceIDs.Split(',');
+
+                Ids = Ids.Where(i => i != "undefined").ToArray();
+                Ids = Ids.Where(i => i != "true").ToArray();
+                Ids = Ids.Where(i => i != "on").ToArray();
+                foreach (string str in Ids)
+                {
+                    UserMaster user = new UserMaster();
+                    user.ReferenceId = Convert.ToInt32(str);
+                    user.UserId = UserId;
+                    k = k + _IUserMasterService.UserAssignSingleAreaOfResponsibility(user);
+                }
+            }
+
+            if (k > 0)
+            {
+                TempData["msgAssign"] = "Assign Area Of Responsibility successfully";
+            }
+            else
+            {
+                TempData["errAssign"] = "Error occured while Assign Area Of Responsibility(s)";
+            }
+            return Json("", JsonRequestBehavior.AllowGet);
+        }
+
+        [CheckSessionFilter]
+        public SelectList GetAllDivisions()
+        {
+            List<Dealers> lstMonthlyPlan = _IDealersService.GetAllDivisions().OrderBy(x => x.Division).ToList();
+            return new SelectList(lstMonthlyPlan, "Division", "Division");
+        }
+
+        #endregion Map Area Of Responsibility Section
+
+        [HttpPost]
+        [CheckSessionFilter]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        public ActionResult ExportUsers(UserMaster _user)
+        {
+
+            if (_user.DisplayName != null && _user.DisplayName != "")
+            {
+                _user.DisplayName = _user.DisplayName.Trim();
+            }
+
+            if (_user.EmailAddress != null && _user.EmailAddress != "")
+            {
+                _user.EmailAddress = _user.EmailAddress.Trim();
+            }
+
+            if (_user.User_Id != null && _user.User_Id != "")
+            {
+                _user.User_Id = _user.User_Id.Trim();
+            }
+
+            if (_user.State != null && _user.State != "")
+            {
+                _user.StateCode = Convert.ToInt32(_user.State);
+            }
+
+            List<UserMaster> lst = _IUserMasterService.GetAllUserInExcel(_user).ToList();
+
+            if (lst.Count() == 0)
+            {
+                TempData["alertmsg"] = "No records to export";
+                return RedirectToAction("ManageUserMaster");
+            }
+            if (lst.Count > 0)
+            {
+                lst = (from u in lst
+                       select new UserMaster()
+                       {
+                           UserId = u.UserId,
+                           Login = u.Login,
+                           User_Id = u.User_Id,
+                           CurrentPassword = u.CurrentPassword,
+                           DisplayName = u.DisplayName,
+                           DesignationCode = u.DesignationCode,
+                           DesignationName = u.DesignationName,
+                           ContactNumber = (u.ContactNumber == "Null" || u.ContactNumber == "null") ? "" : u.ContactNumber,
+                           Role_Code = u.Role_Code,
+                           Role_Name = u.Role_Name,
+                           DealerCode = u.DealerCode,
+                           IsActive = u.IsActive,
+                           ActiveStatus = u.IsActive == 0 ? "Inactive" : "Active",
+                           EmailAddress = u.EmailAddress,
+                           DisplayDesignation = u.DisplayDesignation,
+                           Division = u.Division,
+                           DivisionName = u.DivisionName,
+                           StateName = u.StateName,
+                           DealerName = u.DealerName,
+                           DealerSapCode = u.DealerSapCode,
+                           TotalCount = u.TotalCount // To display total records in jquery datatable.
+                       }).ToList();
+            }
+
+            DataTable dt = new DataTable();
+            dt = Utility.ToDataTable(lst);
+
+
+
+            dt = dt.DefaultView.ToTable(false,
+                   "ActiveStatus", "IsActive", "Division", "StateName", "DisplayName", "User_Id", "DealerSapCode", "DealerName", "DesignationName", "Role_Name", "DisplayDesignation", "EmailAddress", "ContactNumber"
+                    );
+
+            foreach (DataRow rows in dt.Rows)
+            {
+                if (Convert.ToString(rows["IsActive"]) == "1")
+                    rows["ActiveStatus"] = "Active";
+                else
+                    rows["ActiveStatus"] = "Inactive";
+            }
+
+            dt.Columns.Remove("IsActive");
+            if (dt.Columns.Contains("ActiveStatus"))
+                dt.Columns["ActiveStatus"].ColumnName = "Status";
+            if (dt.Columns.Contains("DisplayName"))
+                dt.Columns["DisplayName"].ColumnName = "User Name";
+            if (dt.Columns.Contains("User_Id"))
+                dt.Columns["User_Id"].ColumnName = "User Id";
+            if (dt.Columns.Contains("DesignationName"))
+                dt.Columns["DesignationName"].ColumnName = "Designation";
+            if (dt.Columns.Contains("Role_Name"))
+                dt.Columns["Role_Name"].ColumnName = "Role";
+            if (dt.Columns.Contains("DisplayDesignation"))
+                dt.Columns["DisplayDesignation"].ColumnName = "Display Designation";
+            if (dt.Columns.Contains("EmailAddress"))
+                dt.Columns["EmailAddress"].ColumnName = "Email Id";
+            if (dt.Columns.Contains("ContactNumber"))
+                dt.Columns["ContactNumber"].ColumnName = "Contact Number";
+
+            if (dt.Columns.Contains("StateName"))
+                dt.Columns["StateName"].ColumnName = "State";
+
+            if (dt.Columns.Contains("DealerName"))
+                dt.Columns["DealerName"].ColumnName = "Dealer Name";
+
+            if (dt.Columns.Contains("DealerSapCode"))
+                dt.Columns["DealerSapCode"].ColumnName = "Dealer Sap Code";
+
+
+            GridView gv = new GridView();
+
+            gv.DataSource = dt;
+            gv.DataBind();
+            Response.ClearContent();
+            Response.Buffer = true;
+
+            Response.AddHeader("content-disposition", "attachment; filename=ManageUsers_" + DateTime.Now.ToString("dd-MM-yyyy-hh-mm-ss") + ".xls");
+            this.Response.ContentType = "application/vnd.ms-excel";
+            Response.Charset = "";
+            Response.ContentEncoding = System.Text.Encoding.Default;
+            StringWriter sw = new StringWriter();
+            HtmlTextWriter htw = new HtmlTextWriter(sw);
+            gv.RenderControl(htw);
+            string sHTML = sw.ToString();
+            Response.Output.Write(sHTML);
+            Response.Flush();
+            Response.End();
+
+            return null;
+
+        }
+
+        [CheckSessionFilter]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        public ActionResult UploadNewUser()
+        {
+            UserMaster user = new UserMaster();
+
+            User loginInUser = new User();
+            if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+            {
+                loginInUser = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+            }
+
+            List<RtoData> errFiles = _RtoDataService.RtoDataErrorFileLogGet(new RtoData() { CreatedById = Convert.ToInt32(loginInUser.UserId), ErrorFileType = ImportColumnMapping_Constants.UserData }).ToList();
+            ViewBag.ErrorFiles = errFiles;
+            //return PartialView("_UploadNewUser", user);
+            return View(user);
+        }
+
+        [HttpPost]
+        public ActionResult BulkImportUserData(UserMaster model)
+        {
+            FileHandle fileHandle = new FileHandle();
+            string returnFilePath = string.Empty;
+            string returnErrorMsg = string.Empty;
+            string FileExt = string.Empty;
+            string FileNme = string.Empty;
+            string UploadFilePath = ConfigurationManager.AppSettings["FileUploadPath"];
+
+            User LoggedInUser = new User();
+            if (JDDOASession.IsInSession(SessionKeys.CurrentUser))
+            {
+                LoggedInUser = (User)JDDOASession.GetDirectValue(SessionKeys.CurrentUser);
+            }
+
+            string dateTimeStamp = DateTime.Now.ToString("_dd_MM_yyyy_hh_mm_ss");
+            string fileExtension = Path.GetExtension(model.UserDataFile.FileName);
+            string fullname = model.UserDataFile.FileName.Remove(model.UserDataFile.FileName.IndexOf(fileExtension)) +
+               dateTimeStamp + fileExtension;
+
+            fileHandle.FileName = fullname;
+            fileHandle.MIMEType = model.UserDataFile.ContentType;
+            fileHandle.FilePath = UploadFilePath;
+            fileHandle.Content = model.UserDataFile.InputStream;
+
+
+            // Upload  File Path  Pass ref variable as  ref returnFilePath  for full file path and returnErrorMsg error message if any 
+            FileHandler fHandler = new FileHandler();
+            fHandler.UploadFile(fileHandle, ref returnFilePath, ref returnErrorMsg);
+
+            string fileName = returnFilePath;
+            DataSet ds = fileHandle.ReadExcelToTable(fileName);
+
+            DataTable dtExcelUsers = new DataTable();
+            dtExcelUsers = ds.Tables[0];
+
+            string errorMsg = "";
+            List<UserMaster> lstErrorExport = new List<UserMaster>();
+
+            List<UserMaster> lstExcelData = MapDataTableToObjects<UserMaster>(ref lstErrorExport, ref errorMsg, ds, "UserData", fileName);
+
+            #region Dealer Preparation
+
+            Dealers dealer = new Dealers();
+            dealer.UserId = (int)LoggedInUser.UserId;
+            List<Dealers> lstDealers = _IDealersService.GetAllDealers().ToList();
+
+            List<Designation> lstDesignation = _IDesignationService.GetAll(new Designation()).ToList();
+
+            List<RoleAssignment> lstRoleAssignment = _IRoleAssignmentService.GetAll(new RoleAssignment()).ToList();
+
+            List<DepartmentMaster> lstDepartments = _IDepartmentMasterService.GetAll(new DepartmentMaster()).ToList();
+
+            List<GradesMaster> lstGrades = _IGradesMasterService.GetAll(new GradesMaster()).ToList();
+            List<Lookup> lstPlatform = _ILookUpService.GetAll(new Lookup() { LookupType = Lookup_Constants.ACTIVITY_TYPE_CATEGORY }).ToList();
+            #endregion Dealer Preparation
+
+
+            bool isFileValid = true;
+            int totalCount = lstExcelData.Count;
+            int rowcount = 0;
+            int rowsAffected = 0; int rowNo = 1;
+            bool isDataExistInFile = false;
+
+            rowcount = lstErrorExport.Count();
+            if (lstErrorExport != null && lstErrorExport.Count > 0)
+            {
+                foreach (UserMaster item in lstErrorExport)
+                {
+                    item.ErrorMessages = "Invalid Record";
+                }
+                isDataExistInFile = true;
+            }
+
+
+            string fileId = CustomeHelpers.GeneratorUniqueId("Usr_");
+
+            #region Remove empty rows at the end
+
+            lstExcelData.Reverse();
+
+
+            List<UserMaster> emptyRowsAtEnd = new List<UserMaster>();
+
+            foreach (UserMaster item in lstExcelData)
+            {
+                if (
+                   item.Name == null &&
+                    item.UserId == null &&
+                    item.Designation == null &&
+                    item.RoleName == null &&
+                    item.ContactNo == null &&
+                    item.EmailAddress == null &&
+                    item.DealerSapCode == null &&
+                    item.ActiveStatus == null
+                   )
+                {
+                    emptyRowsAtEnd.Add(item);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            lstExcelData.Reverse();
+
+            foreach (UserMaster emptyrow in emptyRowsAtEnd)
+            {
+                lstExcelData.Remove(emptyrow);
+            }
+
+            #endregion Remove empty rows at the end
+
+            foreach (UserMaster item in lstExcelData)
+            {
+                rowNo = rowNo + 1;
+
+                if (
+                   item.Name == null &&
+                    item.UserId == null &&
+                    item.Designation == null &&
+                    item.RoleName == null &&
+                    item.ContactNo == null &&
+                    item.EmailAddress == null &&
+                    item.DealerSapCode == null &&
+                    item.ActiveStatus == null
+                  )
+                {
+                    continue;
+                }
+
+                isDataExistInFile = true;
+                isFileValid = true;
+
+                rowcount = rowcount + 1;
+
+                if (string.IsNullOrEmpty(Convert.ToString(item.Name)))
+                {
+                    isFileValid = false;
+                    item.ErrorMessages = "Name should not be empty.";
+                }
+                if (string.IsNullOrEmpty(Convert.ToString(item.User_Id)))
+                {
+                    isFileValid = false;
+                    item.ErrorMessages = "User Id should not be empty.";
+                }
+                if (string.IsNullOrEmpty(Convert.ToString(item.Designation)))
+                {
+                    isFileValid = false;
+                    item.ErrorMessages = "Designation should not be empty.";
+                }
+                if (string.IsNullOrEmpty(Convert.ToString(item.RoleName)))
+                {
+                    isFileValid = false;
+                    item.ErrorMessages = "Role should not be empty.";
+                }
+                if (string.IsNullOrEmpty(Convert.ToString(item.DealerSapCode)))
+                {
+                    isFileValid = false;
+                    item.ErrorMessages = "Dealer Sap Code should not be empty.";
+                }
+                if (string.IsNullOrEmpty(Convert.ToString(item.ActiveStatus)))
+                {
+                    isFileValid = false;
+                    item.ErrorMessages = "Status should not be empty.";
+                }
+                else
+                {
+                    if (item.ActiveStatus.Trim().ToUpper() == "ACTIVE")
+                    {
+                        item.IsActive = 1;
+                    }
+                    else if (item.ActiveStatus.Trim().ToUpper() == "INACTIVE" || item.ActiveStatus.Trim().ToUpper() == "IN-ACTIVE")
+                    {
+                        item.IsActive = 0;
+                    }
+                    else
+                    {
+                        isFileValid = false;
+                        item.ErrorMessages = "Status should be 'Active' or 'Inactive'.";
+                    }
+                }
+
+                if (isFileValid)
+                {
+                    int cntSapCd = lstDealers.Where(d => d.sapCode == item.DealerSapCode).Count();
+                    if (cntSapCd == 0)
+                    {
+                        isFileValid = false;
+                        item.ErrorMessages = "'" + item.DealerSapCode + "' dealer sap code does not exists.";
+                    }
+                    if (cntSapCd > 0)
+                    {
+                        int IsActive = lstDealers.Where(d => d.sapCode == item.DealerSapCode && d.IsActive == 1).Count();
+
+                        if (IsActive == 0)
+                        {
+                            isFileValid = false;
+                            item.ErrorMessages = "'" + item.DealerSapCode + "' dealer sap code is InActive.";
+                        }
+                    }
+
+                    int cntDesignation = lstDesignation.Where(d => d.DesignationName.ToUpper() == item.Designation.ToUpper()).Count();
+                    if (cntDesignation == 0)
+                    {
+                        isFileValid = false;
+                        item.ErrorMessages = "'" + item.Designation + "' Designation does not exists.";
+                    }
+                    else
+                    {
+                        item.DesignationCode = lstDesignation.Where(d => d.DesignationName.ToUpper() == item.Designation.ToUpper()).Select(s => s.DesignationCode).FirstOrDefault();
+
+                        if (item.DesignationCode == Convert.ToInt32(UserDesignations.DEMONSTRATOR) || item.DesignationCode == Convert.ToInt32(UserDesignations.CO_GENERATOR))
+                        {
+
+                            if (string.IsNullOrEmpty(Convert.ToString(item.BaseLocation)))
+                            {
+                                isFileValid = false;
+                                item.ErrorMessages = " Base Location should not be empty.";
+                            }
+                        }
+                    }
+
+                    int cntRoleName = lstRoleAssignment.Where(d => d.Role_Name.ToUpper() == item.RoleName.ToUpper()).Count();
+                    if (cntRoleName == 0)
+                    {
+                        isFileValid = false;
+                        item.ErrorMessages = "'" + item.RoleName + "' Role does not exists.";
+                    }
+                    else
+                    {
+                        item.Role_Code = lstRoleAssignment.Where(d => d.Role_Name.ToUpper() == item.RoleName.ToUpper()).Select(s => s.Role_Code).FirstOrDefault();
+                    }
+
+                    if (!string.IsNullOrEmpty(item.DepartmentName))
+                    {
+                        int cntDepartmentName = lstDepartments.Where(d => d.m_DepartmentName.ToUpper() == item.DepartmentName.ToUpper()).Count();
+                        if (cntDepartmentName == 0)
+                        {
+                            isFileValid = false;
+                            item.ErrorMessages = "'" + item.DepartmentName + "' Department does not exists.";
+                        }
+                        else
+                        {
+                            item.f_department_cd = lstDepartments.Where(d => d.m_DepartmentName.ToUpper() == item.DepartmentName.ToUpper()).Select(s => s.m_sys_cd).FirstOrDefault();
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(item.f_manager_cd))
+                    {
+                        var status = _IUserMasterService.GetScalar(new UserMaster() { User_Id = item.f_manager_cd });
+
+                        if (status == null || Convert.ToString(status) == "" || Convert.ToString(status) == "0")
+                        {
+                            isFileValid = false;
+                            item.ErrorMessages = "'" + item.f_manager_cd + "' Manager does not exists.";
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(item.Platforms))
+                    {
+                        List<string> lstUploadedPlatform = item.Platforms.Split(',').ToList();
+                        foreach (string singlePlatform in lstUploadedPlatform)
+                        {
+                            if (lstPlatform.Any(p => p.LookUpValue.ToUpper() == singlePlatform.ToUpper()))
+                                continue;
+                            else
+                            {
+                                isFileValid = false;
+                                item.ErrorMessages = "'" + singlePlatform + "' Platform does not exists.";
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(item.Levels))
+                    {
+                        List<string> lstUploadedLevels = item.Levels.Split(',').ToList();
+                        foreach (string singleLevel in lstUploadedLevels)
+                        {
+                            if (lstGrades.Any(p => p.m_GradeName == singleLevel))
+                                continue;
+                            else
+                            {
+                                isFileValid = false;
+                                item.ErrorMessages = "'" + singleLevel + "' Level does not exists.";
+                            }
+                        }
+                    }
+
+                }
+
+                if (isFileValid)
+                {
+                    item.UserId = Convert.ToInt32(LoggedInUser.UserId);
+                    item.DisplayDesignation = item.Designation;
+
+                    object objRet = _IUserMasterService.AddEditBulkUploadUsers(item);
+
+                    if (objRet != null && Convert.ToString(objRet) != "")
+                    {
+                        isFileValid = false;
+                        item.ErrorMessages = Convert.ToString(objRet);
+                        lstErrorExport.Add(item);
+                    }
+                    else
+                    {
+                        rowsAffected = rowsAffected + 1;
+                    }
+                }
+                else
+                {
+                    lstErrorExport.Add(item);
+                }
+            }
+
+            string uploadStatus = ""; string altMsg = string.Empty;
+            string errFileName = string.Empty;
+
+            string DataErrorFilePath = string.Empty;
+
+            if (rowcount == rowsAffected)
+            {
+                if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    uploadStatus = "FAILED";
+                    TempData["ErrorList"] = "0";
+                    TempData["UploadErrorMsg"] = "Invalid File.No record(s) have been uploaded.";
+                }
+                else
+                {
+                    uploadStatus = "SUCCESSFULL";
+                    TempData["ErrorList"] = null;
+                    TempData["UploadSuccessMsg"] = rowsAffected.ToString() + " records uploaded successfully.";
+                }
+
+            }
+            else if (rowsAffected > 0)
+            {
+                TempData["ErrorList"] = "0";
+                uploadStatus = rowsAffected.ToString() + " out of " + rowcount.ToString() + " records uploaded.";
+                TempData["UploadErrorMsg"] = rowsAffected.ToString() + " out of " + rowcount.ToString() + " records uploaded.";
+            }
+            else
+            {
+                uploadStatus = "FAILED";
+                TempData["ErrorList"] = "0";
+                TempData["UploadErrorMsg"] = "No record(s) have been uploaded.";
+            }
+
+            if (lstErrorExport.Count > 0)
+            {
+
+                //#region Export the rows containing validation errors.
+                string rtoDataErrorFilePath = ConfigurationManager.AppSettings["RtoDataErrorFilePath"].ToString();
+
+
+                DataTable dtErr = lstErrorExport.ToDataTable();
+
+                dtErr = dtErr.DefaultView.ToTable(false,
+                     "Name", "User_Id", "Designation", "RoleName", "ContactNumber", "EmailAddress", "BaseLocation", "DealerSapCode", "ActiveStatus",
+                     "DepartmentName", "f_manager_cd", "Platforms", "Levels", "ErrorMessages"
+               );
+
+                #region rename columns
+
+                if (dtErr.Columns.Contains("ErrorMessages"))
+                    dtErr.Columns["ErrorMessages"].ColumnName = "Validation Messages";
+                if (dtErr.Columns.Contains("Name"))
+                    dtErr.Columns["Name"].ColumnName = "Name";
+
+                if (dtErr.Columns.Contains("User_Id"))
+                    dtErr.Columns["User_Id"].ColumnName = "User Id";
+
+                if (dtErr.Columns.Contains("Designation"))
+                    dtErr.Columns["Designation"].ColumnName = "Designation";
+
+                if (dtErr.Columns.Contains("RoleName"))
+                    dtErr.Columns["RoleName"].ColumnName = "Role";
+
+                if (dtErr.Columns.Contains("ContactNumber"))
+                    dtErr.Columns["ContactNumber"].ColumnName = "Contact Number";
+
+                if (dtErr.Columns.Contains("EmailAddress"))
+                    dtErr.Columns["EmailAddress"].ColumnName = "Email Id";
+
+                if (dtErr.Columns.Contains("DealerSapCode"))
+                    dtErr.Columns["DealerSapCode"].ColumnName = "Dealer Sap Code";
+
+                if (dtErr.Columns.Contains("BaseLocation"))
+                    dtErr.Columns["BaseLocation"].ColumnName = "Base Location";
+
+                if (dtErr.Columns.Contains("ActiveStatus"))
+                    dtErr.Columns["ActiveStatus"].ColumnName = "Status (Active/Inactive)";
+
+                if (dtErr.Columns.Contains("DepartmentName"))
+                    dtErr.Columns["DepartmentName"].ColumnName = "Department";
+
+                if (dtErr.Columns.Contains("f_manager_cd"))
+                    dtErr.Columns["f_manager_cd"].ColumnName = "Manager";
+
+                if (dtErr.Columns.Contains("Platforms"))
+                    dtErr.Columns["Platforms"].ColumnName = "Platform";
+
+                if (dtErr.Columns.Contains("Levels"))
+                    dtErr.Columns["Levels"].ColumnName = "Level";
+
+                #endregion rename columns
+
+                errFileName = "Upload_User_ErrorRows_" + dateTimeStamp + ".xls";
+
+
+                GridView gv = new GridView();
+                gv.DataSource = dtErr;
+                gv.DataBind();
+                Response.ClearContent();
+                Response.Buffer = true;
+                StringWriter sw = new StringWriter();
+                HtmlTextWriter htw = new HtmlTextWriter(sw);
+                gv.RenderControl(htw);
+                string renderedGridView = sw.ToString();
+                System.IO.File.WriteAllText(rtoDataErrorFilePath + errFileName, renderedGridView);
+
+                _RtoDataService.AddEditRtoDataErrorFileLog(new RtoData()
+                {
+                    ErrorFileName = errFileName,
+                    CreatedById = Convert.ToInt32(LoggedInUser.UserId),
+                    CreatedDate = CustomeHelpers.GetTimingList(),
+                    ErrorFileType = ImportColumnMapping_Constants.UserData
+                });
+
+
+
+
+                ////DataTable dtErr = lstErrorExport.ToDataTable();
+                ////DataErrorFilePath = ConfigurationManager.AppSettings["TIVDataErrorFilePath"].ToString();
+
+                ////errFileName = "User_ErrorRows_" + dateTimeStamp + ".xlsx";
+
+                ////DataTable dt = new DataTable();
+
+                ////DataColumn Col1 = dt.Columns.Add("Name");
+                ////DataColumn Col2 = dt.Columns.Add("User Id");
+                ////DataColumn Col3 = dt.Columns.Add("Designation");
+                ////DataColumn Col4 = dt.Columns.Add("Role");
+                ////DataColumn Col5 = dt.Columns.Add("Contact Number");
+                ////DataColumn Col6 = dt.Columns.Add("Email Id");
+                ////DataColumn Col7 = dt.Columns.Add("Dealer Sap Code");
+                ////DataColumn Col8 = dt.Columns.Add("ErrorMessages");
+
+
+
+                ////Col1.SetOrdinal(0);
+                ////Col2.SetOrdinal(1);
+                ////Col3.SetOrdinal(2);
+                ////Col4.SetOrdinal(3);
+                ////Col5.SetOrdinal(4);
+                ////Col6.SetOrdinal(5);
+                ////Col7.SetOrdinal(6);
+                ////Col8.SetOrdinal(7);
+
+                ////foreach (User dlr in lstErrorExport)
+                ////{
+                ////    DataRow toInsert = dt.NewRow();
+                ////    toInsert[0] = dlr.Name;
+                ////    toInsert[1] = dlr.UserId;
+                ////    toInsert[2] = dlr.Designation;
+                ////    toInsert[3] = dlr.RoleName;
+                ////    toInsert[4] = dlr.ContactNumber;
+                ////    toInsert[5] = dlr.EmailAddress;
+                ////    toInsert[6] = dlr.DealerSapCode;
+                ////    toInsert[7] = dlr.ErrorMessages;
+
+                ////    dt.Rows.Add(toInsert);
+                ////}
+
+                //var file = new FileInfo(DataErrorFilePath + errFileName);
+                //string fileName2 = Path.GetFileNameWithoutExtension(DataErrorFilePath + errFileName);
+                //using (ExcelPackage pck = new ExcelPackage(file))
+                //{
+                //    ExcelWorksheet ws = pck.Workbook.Worksheets.Add(fileName2);
+                //    ws.Cells["A1"].LoadFromDataTable(dt, true);
+                //    this.Response.ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                //    pck.Save();
+                //}
+            }
+
+            if (!isDataExistInFile)
+            {
+                if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    uploadStatus = "FAILED";
+                    TempData["ErrorList"] = "0";
+                    TempData["UploadErrorMsg"] = "Invalid File.No record(s) have been uploaded.";
+                }
+                else
+                {
+                    TempData["ErrorList"] = null;
+                    TempData["UploadSuccessMsg"] = null;
+                    TempData["UploadErrorMsg"] = "No records to upload.";
+                }
+
+            }
+            else
+            {
+
+                _RtoDataService.AddRtoDataImportLog(new RtoData()
+                {
+                    FileId = fileId,
+                    FileName = fileHandle.FileName,
+                    Status = uploadStatus,
+                    ImportFileType = ImportColumnMapping_Constants.UserData,
+                    CreatedById = Convert.ToInt32(LoggedInUser.UserId),
+                    CreatedDate = CustomeHelpers.GetTimingList()
+                });
+
+                //_ImportFileMasterService.AddTIVDataImportLog(new ImportFileMaster()
+                //{
+                //    FileId = fileId,
+                //    ImportType = SchemeConstants.EMS_RETAIL_SALES_IMPORTTYPE,
+                //    FileName = fileHandle.FileName,
+                //    FilePath = UploadFilePath,
+                //    FileStatus = uploadStatus,
+                //    SuccessCount = rowsAffected,
+                //    ErrorCount = rowcount - rowsAffected,
+                //    ErrorFilePath = (!string.IsNullOrEmpty(DataErrorFilePath)) ? DataErrorFilePath + errFileName : null,
+                //    CreatedById = Convert.ToInt32(LoggedInUser.UserId),
+                //    Year = year,
+                //    Quarter = quarter,
+                //    QuarterPeriod = model.Quarter
+                //});
+            }
+            return RedirectToAction("UploadNewUser");
+
+        }
+
+        [CheckSessionFilter]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult DownloadUserDataTemplate()
+        {
+            string rtoTemplateFilePath = ConfigurationManager.AppSettings["UserDataTemplateFilePath"].ToString();
+            string fileName = Path.GetFileName(rtoTemplateFilePath);
+            byte[] fileBytes = System.IO.File.ReadAllBytes(@"" + rtoTemplateFilePath);
+            return File(fileBytes, System.Net.Mime.MediaTypeNames.Application.Octet, fileName);
+        }
+
+        [CheckSessionFilter]
+        [CustomeAuthorize(FeatureId = RoleFeatures_Constants.MANAGE_USERMASTER)]
+        [OutputCache(NoStore = true, Duration = 0, VaryByParam = "None")]
+        public ActionResult DownloadUserDataErrorFile(string fileId)
+        {
+            RtoData errFile = _RtoDataService.RtoDataErrorFileLogGet(new RtoData() { RtoErrorFileId = Convert.ToInt32(fileId) }).FirstOrDefault();
+            if (errFile != null)
+            {
+                string rtoTemplateFilePath = ConfigurationManager.AppSettings["RtoDataErrorFilePath"].ToString();
+                string fullPath = rtoTemplateFilePath + errFile.ErrorFileName;
+                byte[] fileBytes = System.IO.File.ReadAllBytes(@"" + fullPath);
+                _RtoDataService.AddEditRtoDataErrorFileLog(new RtoData() { RtoErrorFileId = Convert.ToInt32(fileId) });
+                return File(fileBytes, System.Net.Mime.MediaTypeNames.Application.Octet, errFile.ErrorFileName);
+            }
+            return RedirectToAction("UploadNewUser");
+        }
+
+        public List<T> MapDataTableToObjects<T>(ref List<T> lstErrFile, ref string errormMessage, DataSet ds, string ImportType, string FilePath) where T : class, new()
+        {
+            bool IsInValidColumn = false;
+            StringBuilder strStatus = new StringBuilder();
+            List<T> lstObjects = new List<T>();
+            ImportColumnMapping objImp = new ImportColumnMapping();
+            objImp.ImportType = ImportType;
+            List<ImportColumnMapping> lstMappings = _IImportColumnMappingService.GetAll(objImp).ToList();
+
+            DataSet newds = new DataSet();
+
+
+            foreach (DataTable dtData in ds.Tables)
+            {
+                foreach (DataColumn col in dtData.Columns)
+                {
+                    col.ColumnName = col.ColumnName.Trim();
+                }
+                newds.Tables.Add(dtData.Copy());
+            }
+
+
+            foreach (DataTable dtData in newds.Tables)
+            {
+                foreach (ImportColumnMapping objCol in lstMappings)
+                {
+                    if (!dtData.Columns.Contains(objCol.ImportColumnName.Trim()))
+                    {
+                        errormMessage = "Invalid File.";
+                        IsInValidColumn = true;
+                        break;
+                    }
+                }
+
+            }
+
+            if (!IsInValidColumn)
+            {
+                foreach (DataTable dtData in newds.Tables)
+                {
+                    bool IsExceptionOccurred = false;
+                    if (dtData.Columns.Contains("RowNumber") == false)
+                    {
+                        dtData.Columns.Add("RowNumber", typeof(int));
+                    }
+                    if (dtData != null && dtData.Rows.Count > 0)
+                    {
+                        int drCount = 1;
+                        int rowNumber = 1;
+                        T objTemprecord = new T();
+                        foreach (DataRow dr in dtData.Rows)
+                        {
+                            dr["RowNumber"] = rowNumber;
+
+                            T objTemp = new T();
+                            objTemprecord = objTemp;
+                            bool isErrorInMap = false;
+                            foreach (ImportColumnMapping objCol in lstMappings)
+                            {
+                                try
+                                {
+                                    PropertyInfo pi = objTemp.GetType().GetProperty(objCol.ImportProperty);
+                                    if (pi == null)
+                                        continue;
+                                    if (dtData.Columns.Contains(objCol.ImportColumnName.Trim()))
+                                    {
+                                        if (pi != null)
+                                        {
+                                            if (dr[objCol.ImportColumnName.Trim()] != DBNull.Value && !string.IsNullOrEmpty(Convert.ToString(dr[objCol.ImportColumnName.Trim()])))
+                                            {
+                                                switch (objCol.ImportColumnType.ToLower().Trim())
+                                                {
+                                                    case "int":
+                                                        int strintval = Convert.ToInt32(dr[objCol.ImportColumnName.Trim()]);
+                                                        pi.SetValue(objTemp, strintval);
+                                                        break;
+                                                    case "float":
+                                                        double strfloatval = Convert.ToDouble(dr[objCol.ImportColumnName.Trim()]);
+                                                        pi.SetValue(objTemp, strfloatval);
+                                                        break;
+                                                    case "datetime":
+                                                        DateTime strDate = Convert.ToDateTime(dr[objCol.ImportColumnName.Trim()]);
+                                                        pi.SetValue(objTemp, strDate);
+                                                        break;
+                                                    case "bool":
+                                                        string StrBoolValue = Convert.ToString(dr[objCol.ImportColumnName.Trim()]);
+                                                        bool isTrue = false;
+                                                        if (StrBoolValue == "1" || StrBoolValue.ToLower() == "true")
+                                                            isTrue = true;
+                                                        pi.SetValue(objTemp, isTrue);
+                                                        break;
+                                                    case "decimal":
+                                                        decimal strdecimal = Convert.ToDecimal(dr[objCol.ImportColumnName.Trim()]);
+                                                        pi.SetValue(objTemp, strdecimal);
+                                                        break;
+                                                    default:
+                                                        string strVal = Convert.ToString(dr[objCol.ImportColumnName.Trim()]);
+                                                        pi.SetValue(objTemp, strVal);
+                                                        break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        isErrorInMap = true;
+                                        errormMessage = "Invalid File";
+                                        break;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    IsExceptionOccurred = true;
+                                    isErrorInMap = true;
+                                    strStatus.Append("<tr><td>" + rowNumber + "</td><td>Error while reading record from datatable for  " + objCol.ImportColumnName.Trim() + " <div> ErrorMessage = >" + ex.Message + " Stack Trace = > " + ex.StackTrace + " </div>  </td></tr>");
+                                }
+                            }
+                            if (!isErrorInMap)
+                            {
+                                lstObjects.Add(objTemp);
+                            }
+                            drCount++;
+                            rowNumber++;
+                        }
+
+                        if (IsExceptionOccurred == true)
+                        {
+                            lstErrFile.Add(objTemprecord);
+                        }
+                    }
+
+                }
+            }
+            return lstObjects;
+        }
+    }
+}
