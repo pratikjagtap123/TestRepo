@@ -1,0 +1,165 @@
+USE [JDDOAE_DB_AOR_WORKFLOW]
+GO
+/****** Object:  StoredProcedure [dbo].[IMS_sproc_Users_GetAll]    Script Date: 1/9/2020 4:57:50 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+--exec IMS_sproc_Users_GetAll @DisplayName=N'',@DealerCode=N'0',@IsActive=N'2',@EmailAddress=N'',@User_Id=N'',@DesignationCode=N'0',@PageIndex=N'1',@PageSize=N'10',@SortExp=N'',@Division=N'0',@StateCode=N'0'
+
+------------------------------------------
+--Deepak: Backup on 3/Jun/2019
+------------------------------------------
+ ALTER PROC [dbo].[IMS_sproc_Users_GetAll] 
+	@PageIndex INT = NULL, 
+	@PageSize INT = NULL, 
+	@SortExp VARCHAR(1000) = NULL,
+	@DisplayName varchar(200) = null,
+	@DesignationCode int =null,
+	@IsActive int = null,
+	@EmailAddress varchar(200) = null,
+	@User_Id varchar(200) = null,
+	@StateCode   varchar(max) = null ,
+	@DealerCode  varchar(max) = null , 
+	@Division   varchar(max) = null
+AS
+
+DECLARE @Cmd VARCHAR(MAX),   @cmdcount VARCHAR(MAX), @SortVal VARCHAR(MAX) 
+DECLARE @WhereClause NVARCHAR(MAX) 
+DECLARE @startRowIndex INT, @TotalRows INT 
+
+SET @startRowIndex = ( @PageIndex - 1 ) * @PageSize 
+
+
+SET @WhereClause = ' WHERE 1>0 '
+
+ SET @SortVal = ''  
+
+IF ( @SortExp IS NOT NULL AND @SortExp <> '') 
+  SET @SortVal = ' order by ' + @SortExp  
+ELSE
+  SET @SortExp = ' DisplayName asc'
+
+
+IF(@DisplayName is not null AND @DisplayName<>'')
+BEGIN
+    SET @WhereClause = @WhereClause + ' AND DisplayName like ''%' + @DisplayName + '%''';
+END 
+IF(@EmailAddress is not null AND @EmailAddress<>'')
+BEGIN
+    SET @WhereClause = @WhereClause + ' AND EmailAddress like ''%' + @EmailAddress + '%''';
+END 
+
+IF(@DesignationCode is not null AND @DesignationCode != 0)
+BEGIN
+	SET @WhereClause = @WhereClause + ' AND DesignationCode = ' + cast(@DesignationCode as varchar(100)) + '';
+END
+
+IF(@IsActive is not null and @IsActive<>2)
+BEGIN
+if(@IsActive=0)
+    SET @WhereClause = @WhereClause + ' AND IsActive <> ' + cast(1 as varchar(100)) + '';
+	else
+    SET @WhereClause = @WhereClause + ' AND IsActive = ' + cast(@IsActive as varchar(100)) + '';
+END 
+ 
+ IF(@User_Id is not null AND @User_Id<>'')
+BEGIN
+    SET @WhereClause = @WhereClause + ' AND User_Id like ''%' + @User_Id + '%''';
+END 
+
+
+
+if(@StateCode is not null and @StateCode <> '' and @StateCode <> 0 ) 
+BEGIN 
+   Set @WhereClause  =@WhereClause + '   and        StateCode  = ''' + @StateCode  + '''   ' 
+END 
+
+
+if(@DealerCode is not null and @DealerCode <> '' and @DealerCode <> 0)  
+BEGIN 
+	Set @WhereClause  =@WhereClause + '   and       DealerCode   = ''' + @DealerCode  + '''   ' 
+END
+
+
+
+if(@Division is not null and @Division <>'' and @Division <> 0) 
+BEGIN 
+   Set @WhereClause  =@WhereClause + '   and        Division  = ''' + @Division  + '''   ' 
+END 
+
+
+DECLARE @query varchar(MAX)
+
+SET @query = '
+  select 
+  U.m_sys_cd as UserId,
+	U.m_usr_id as Login,
+	U.m_usr_id as User_Id,
+	U.m_pwd as CurrentPassword,
+	U.m_display_name as DisplayName,
+	U.f_designation_cd as DesignationCode,
+	D.m_Designation as DesignationName,
+	U.m_Contact_No as ContactNumber,
+	U.f_role_cd as Role_Code,
+	MB.m_role_name as Role_Name,	
+	U.f_module_right_str,
+	U.f_report_right_str,
+	U.m_LastLogin,
+	U.f_usr_add,
+	U.f_usr_upd,
+	U.f_stamp_add,
+	U.f_stamp_upd,
+	U.f_actv as IsActive,
+	CASE WHEN ISNULL(U.f_actv, 1) = 1 THEN ''Active'' ELSE ''Inactive'' END AS ActiveStatus,
+	U.f_rstat,
+	U.m_vendor_cd,
+	U.m_emailaddr as EmailAddress,
+	U.m_uid,
+	U.m_pwdreset,
+	U.DisplayDesignation,
+  
+    A.m_sys_cd as DealerCode,
+	A.f_sap_cd as DealerSapCode,
+	DN.Division,	
+	--t.f_tehsilblock as TehsilBlockName, 
+	--C.f_district_nm as DistrictName,  
+	s.m_sys_cd as StateCode,
+	s.f_state_nm as StateName,
+	A.m_dlr_nm AS DealerName
+   FROM  
+	IMS_tblDivisions DN 
+	inner  join m_dealers A	On DN.Division  = A.m_division  and A.m_sys_cd!=0
+	inner  join m_TehsilBlock  t   On A.f_block_cd  = t.m_sys_cd 
+	inner  join m_Districts  C     On C.m_sys_cd  = t.m_sys_cd_district 
+	inner  join m_states  s        On s.m_sys_cd  = C.m_sys_cd_state
+	right  join m_appusers U on A.m_sys_cd= U.f_dlr_cd--b.UserId=U.m_sys_cd   
+	left outer join m_designations D on U.f_designation_cd = D.m_sys_cd and D.f_actv=1
+	left join m_roleassignment MB on U.f_role_cd = MB.m_sys_cd '
+	
+
+SELECT  @cmdcount = ' DECLARE @TotalRows int 
+		Select @TotalRows=Count(*) FROM  ( '+@query+' ) as tbl1' + @WhereClause /*Get All Rows*/
+		
+
+IF ( @PageIndex IS NULL AND @PageSize IS NULL)
+		BEGIN 
+		SET @startRowIndex = 0 
+		SET @PageSize = @TotalRows 
+		END  
+
+		IF ( @PageSize IS NOT NULL ) 
+		SET ROWCOUNT @PageSize 
+		SET @Cmd = 'SELECT *,Row_number() over(order by ' + @SortExp + ' ) as rowIndex, @TotalRows as TotalCount 
+		from
+		( '+@query+' ) as tbl
+		' + @WhereClause 
+
+	SET @cmd = @cmdcount + ' Select * from (' + @cmd + ')as innerSelect 
+	WHERE innerSelect.rowIndex>' + CONVERT(VARCHAR, @startRowIndex) + @SortVal 
+	 PRINT @cmd
+ 
+ EXEC (@Cmd) 
+	  
+SET NOCOUNT OFF
